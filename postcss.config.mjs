@@ -9,6 +9,14 @@
 // 3. expandInset — expands `inset: value` to individual top/right/bottom/left.
 //    The CSS `inset` shorthand requires Safari 14.1; Safari 12 ignores it,
 //    causing fixed/absolute overlays to collapse to zero size.
+//
+// 4. inlineSpacingVar — replaces every var(--spacing) with the literal 0.25rem.
+//    Tailwind v4 generates ALL margin/padding/gap as calc(var(--spacing) * N).
+//    If the --spacing custom property doesn't resolve (known issue on iOS 12
+//    when defined with a bare decimal like .25rem), every spacing value is 0
+//    and the layout is completely flat. Inlining removes the CSS variable
+//    dependency entirely: calc(0.25rem * 16) is plain arithmetic Safari 12
+//    handles without any custom property support.
 // ───────────────────────────────────────────────────────────────────────────
 
 function stripCascadeLayers() {
@@ -82,6 +90,18 @@ function expandInset() {
 }
 expandInset.postcss = true;
 
+function inlineSpacingVar() {
+  return {
+    postcssPlugin: "inline-spacing-var",
+    Declaration(decl) {
+      if (decl.value.includes("var(--spacing)")) {
+        decl.value = decl.value.replaceAll("var(--spacing)", "0.25rem");
+      }
+    },
+  };
+}
+inlineSpacingVar.postcss = true;
+
 export default {
-  plugins: ["@tailwindcss/postcss", stripCascadeLayers, stripSingleArgWhere, expandInset],
+  plugins: ["@tailwindcss/postcss", stripCascadeLayers, stripSingleArgWhere, expandInset, inlineSpacingVar],
 };
