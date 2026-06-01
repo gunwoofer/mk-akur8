@@ -54,10 +54,10 @@ export default function PlayerModal({ stats, playerName, onClose }: Props) {
         exit={{ scale: 0.9, y: 20, opacity: 0 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
         onClick={(e) => e.stopPropagation()}
-        className="relative bg-[#141414] border border-[#2a2a2a] rounded-2xl w-full max-w-2xl overflow-hidden"
+        className="relative bg-[#141414] border border-[#2a2a2a] rounded-2xl w-full max-w-2xl flex flex-col overflow-hidden max-h-[85vh]"
       >
-        {/* Header */}
-        <div className="flex items-center p-6 border-b border-[#2a2a2a]">
+        {/* Header — always visible */}
+        <div className="flex items-center p-6 border-b border-[#2a2a2a] shrink-0">
           {player && (
             <span className="text-5xl mr-4">{player.character_avatar}</span>
           )}
@@ -85,8 +85,8 @@ export default function PlayerModal({ stats, playerName, onClose }: Props) {
           </div>
         ) : (
           <>
-            {/* Stat cards */}
-            <div className="grid grid-cols-4 gap-px bg-[#2a2a2a] border-b border-[#2a2a2a]">
+            {/* Stat cards — always visible */}
+            <div className="grid grid-cols-4 gap-px bg-[#2a2a2a] border-b border-[#2a2a2a] shrink-0">
               {[
                 { label: "GPs Played", value: stats.player.gp_played },
                 { label: "Podiums", value: stats.podiums },
@@ -100,7 +100,8 @@ export default function PlayerModal({ stats, playerName, onClose }: Props) {
               ))}
             </div>
 
-            {/* Form guide */}
+            {/* Form guide + hint — scrollable when content overflows */}
+            <div className="overflow-y-auto flex-1 min-h-0">
             <div className="p-6">
               <p className="text-gray-600 text-xs uppercase tracking-widest mb-4">
                 Form Guide — Last {Math.min(10, stats.recent_results.length)} GPs
@@ -157,6 +158,7 @@ export default function PlayerModal({ stats, playerName, onClose }: Props) {
             <div className="px-6 pb-4 text-center">
               <p className="text-gray-800 text-xs">Auto-closes in 15 s · click anywhere to dismiss</p>
             </div>
+            </div> {/* end scrollable body */}
           </>
         )}
       </motion.div>
