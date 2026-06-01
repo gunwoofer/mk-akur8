@@ -1,19 +1,14 @@
 // ─── iOS 12 / Safari 12 compatibility plugins ──────────────────────────────
 //
-// 1. stripCascadeLayers
-//    Safari 12 treats unknown @-rule blocks as errors and silently drops their
-//    entire content. Tailwind v4 wraps all generated CSS in @layer theme / base
-//    / utilities — every Tailwind class would be invisible. This plugin hoists
-//    @layer block contents to the parent scope, preserving declaration order so
-//    cascade priority is unchanged. No :where() or other modern CSS introduced.
+// 1. stripCascadeLayers — hoists @layer block contents to parent scope.
+//    Safari 12 drops the entire content of unknown @-rule blocks.
 //
-// 2. stripSingleArgWhere
-//    Tailwind v4 uses :where(.class>...) for space-y-* and divide-* utilities,
-//    and abbr:where([title]) / input:where([type=...]) in base styles. Safari 12
-//    drops any rule containing an unknown pseudo-class. For single-argument
-//    :where(X), replacing with X is safe — specificity rises slightly but there
-//    are no competing rules in this codebase that would break. Multi-argument
-//    :where(A, B) is left as-is to avoid selector-list expansion complexity.
+// 2. stripSingleArgWhere — unwraps :where(X) → X for single-argument cases.
+//    Safari 12 drops rules whose selectors contain unknown pseudo-classes.
+//
+// 3. expandInset — expands `inset: value` to individual top/right/bottom/left.
+//    The CSS `inset` shorthand requires Safari 14.1; Safari 12 ignores it,
+//    causing fixed/absolute overlays to collapse to zero size.
 // ───────────────────────────────────────────────────────────────────────────
 
 function stripCascadeLayers() {
@@ -39,7 +34,6 @@ function unwrapWhere(selector) {
     const wi = selector.indexOf(":where(", i);
     if (wi === -1) { out += selector.slice(i); break; }
     out += selector.slice(i, wi);
-    // Walk forward to find the matching closing paren (handles nested parens).
     let depth = 1;
     let j = wi + 7;
     while (j < selector.length && depth > 0) {
@@ -48,7 +42,6 @@ function unwrapWhere(selector) {
       if (depth > 0) j++;
     }
     const inner = selector.slice(wi + 7, j);
-    // Only unwrap if there are no top-level commas (single argument).
     let d = 0;
     let hasTopComma = false;
     for (const ch of inner) {
@@ -74,6 +67,21 @@ function stripSingleArgWhere() {
 }
 stripSingleArgWhere.postcss = true;
 
+function expandInset() {
+  return {
+    postcssPlugin: "expand-inset",
+    Declaration(decl) {
+      if (decl.prop !== "inset") return;
+      const val = decl.value;
+      decl.cloneBefore({ prop: "top",    value: val });
+      decl.cloneBefore({ prop: "right",  value: val });
+      decl.cloneBefore({ prop: "bottom", value: val });
+      decl.replaceWith({ prop: "left",   value: val });
+    },
+  };
+}
+expandInset.postcss = true;
+
 export default {
-  plugins: ["@tailwindcss/postcss", stripCascadeLayers, stripSingleArgWhere],
+  plugins: ["@tailwindcss/postcss", stripCascadeLayers, stripSingleArgWhere, expandInset],
 };

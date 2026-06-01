@@ -45,7 +45,7 @@ export default function PlayerModal({ stats, playerName, onClose }: Props) {
       onPointerMove={resetTimeout}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/85" />
 
       {/* Modal */}
       <motion.div
@@ -57,9 +57,9 @@ export default function PlayerModal({ stats, playerName, onClose }: Props) {
         className="relative bg-[#141414] border border-[#2a2a2a] rounded-2xl w-full max-w-2xl overflow-hidden"
       >
         {/* Header */}
-        <div className="flex items-center gap-4 p-6 border-b border-[#2a2a2a]">
+        <div className="flex items-center p-6 border-b border-[#2a2a2a]">
           {player && (
-            <span className="text-5xl">{player.character_avatar}</span>
+            <span className="text-5xl mr-4">{player.character_avatar}</span>
           )}
           <div className="flex-1 min-w-0">
             <h2 className="text-white font-black text-3xl italic tracking-tight truncate">
@@ -113,11 +113,11 @@ export default function PlayerModal({ stats, playerName, onClose }: Props) {
                   {stats.recent_results.map((r, i) => (
                     <div
                       key={r.match_id}
-                      className="flex items-center gap-4"
+                      className="flex items-center"
                     >
                       {/* Position badge */}
                       <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm shrink-0"
+                        className="w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm shrink-0 mr-3"
                         style={{
                           backgroundColor: `${posColor(r.position)}22`,
                           color: posColor(r.position),

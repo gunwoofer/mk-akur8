@@ -61,15 +61,16 @@ export default function Leaderboard() {
             Office Grand Prix · Live Rankings
           </p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+        {/* gap-* replaced with explicit mr-* — flex gap unsupported on iOS 12 */}
+        <div className="flex items-center">
+          <div className="flex items-center mr-6">
+            <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse mr-2" />
             <span className="text-gray-400 text-sm font-medium tracking-wider uppercase">Live</span>
           </div>
           <button
             onClick={toggleFullscreen}
             title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-            className="p-1.5 rounded-lg text-gray-700 hover:text-gray-400 transition-colors"
+            className="p-1.5 rounded-lg text-gray-700 hover:text-gray-400 transition-colors mr-3"
           >
             {isFullscreen ? (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -104,8 +105,8 @@ export default function Leaderboard() {
       <div className="flex-1 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-12 h-12 border-2 border-[#00d4ff] border-t-transparent rounded-full animate-spin" />
+            <div className="flex flex-col items-center">
+              <div className="w-12 h-12 border-2 border-[#00d4ff] border-t-transparent rounded-full animate-spin mb-4" />
               <p className="text-[#00d4ff] text-sm tracking-widest uppercase">Loading</p>
             </div>
           </div>
