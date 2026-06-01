@@ -51,7 +51,7 @@ export default function Leaderboard() {
   }
 
   return (
-    <div className="flex flex-col h-screen w-full px-6 py-5 overflow-hidden">
+    <div className="flex flex-col h-screen w-full px-16 py-5 overflow-hidden">
       <div className="flex items-center justify-between mb-6 shrink-0">
         <div>
           <h1 className="text-[#00d4ff] font-black italic text-5xl tracking-tighter leading-none neon-text">
