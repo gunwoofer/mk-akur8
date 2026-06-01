@@ -26,9 +26,12 @@ export function useLeaderboard() {
   const [error, setError] = useState<string | null>(null);
   const [celebrationWinner, setCelebrationWinner] = useState<CelebrationWinner | null>(null);
 
-  // Ranks from the previous settled fetch — used to compute per-player deltas.
-  // Mutated outside React state so the Strict Mode double-render doesn't corrupt it.
-  const baselineRanksRef = useRef<Record<string, number>>({});
+  // Always-current ranks — snapshot of the last settled fetch; captured as the
+  // frozen baseline when a new GP arrives so subsequent polls keep showing deltas.
+  const liveRanksRef = useRef<Record<string, number>>({});
+  // Ranks just before the latest GP — only updated on a new committed GP.
+  // Delta display uses this so arrows persist until the next GP.
+  const frozenBaselineRef = useRef<Record<string, number>>({});
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Tracks the last match UUID we displayed; undefined until the first fetch completes.
@@ -43,31 +46,39 @@ export function useLeaderboard() {
       ]);
 
       const sorted = sortByRating(data);
-      const oldRanks = baselineRanksRef.current;
-      const isFirstLoad = Object.keys(oldRanks).length === 0;
+      const latestId: string = history.length > 0 ? history[0].match_id : "none";
+      const isFirstLoad = lastMatchIdRef.current === undefined;
+      const isNewGP = !isFirstLoad && latestId !== "none" && latestId !== lastMatchIdRef.current;
+      const latestMatch = history.length > 0 ? (history as HistoryEntry[])[0] : null;
+      const gpCommitted = isNewGP && (latestMatch?.results.length ?? 0) > 0;
 
+      if (gpCommitted) {
+        // Freeze the pre-GP rankings so delta arrows stay visible until the next GP.
+        frozenBaselineRef.current = { ...liveRanksRef.current };
+      }
+
+      const frozen = frozenBaselineRef.current;
       const newRanked: RankedPlayer[] = sorted.map((p, i) => ({
         ...p,
-        rankDelta: isFirstLoad || oldRanks[p.id] === undefined
+        rankDelta: isFirstLoad || frozen[p.id] === undefined
           ? 0
-          : oldRanks[p.id] - (i + 1),
+          : frozen[p.id] - (i + 1),
       }));
 
-      baselineRanksRef.current = Object.fromEntries(sorted.map((p, i) => [p.id, i + 1]));
+      liveRanksRef.current = Object.fromEntries(sorted.map((p, i) => [p.id, i + 1]));
 
-      const latestId: string = history.length > 0 ? history[0].match_id : "none";
-
-      if (
-        lastMatchIdRef.current !== undefined &&
-        latestId !== "none" &&
-        latestId !== lastMatchIdRef.current
-      ) {
-        const winner = (history as HistoryEntry[])[0].results.find((r) => r.position === 1);
-        if (winner) {
-          setCelebrationWinner({ name: winner.name, character_avatar: winner.avatar });
+      if (isNewGP) {
+        if (gpCommitted) {
+          const winner = latestMatch!.results[0]; // ordered by position asc — first is best finisher
+          if (winner) {
+            setCelebrationWinner((prev) => prev ?? { name: winner.name, character_avatar: winner.avatar });
+          }
+          lastMatchIdRef.current = latestId;
         }
+        // else: race_results not yet committed — don't advance ref so we retry next fetch
+      } else {
+        lastMatchIdRef.current = latestId;
       }
-      lastMatchIdRef.current = latestId;
 
       setPlayers(newRanked);
       setError(null);
@@ -91,6 +102,15 @@ export function useLeaderboard() {
     const supabase = getSupabase();
     const channel = supabase
       .channel("leaderboard-live")
+      // Direct push from the admin app after a successful GP submission.
+      // The broadcast arrives before postgres_changes and carries the winner — this is
+      // the primary celebration trigger. The polling path below is the fallback.
+      .on("broadcast", { event: "gp_submitted" }, ({ payload }) => {
+        if (payload?.name) {
+          setCelebrationWinner((prev) => prev ?? { name: payload.name, character_avatar: payload.character_avatar });
+        }
+        doFetch();
+      })
       .on("postgres_changes", { event: "*",      schema: "public", table: "players"      }, trigger)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "race_results" }, trigger)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "matches"      }, trigger)

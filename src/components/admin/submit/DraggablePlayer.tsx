@@ -1,12 +1,9 @@
+"use client";
+
 import { useDraggable } from "@dnd-kit/core";
 import type { Player } from "@/types";
 
-interface Props {
-  player: Player;
-  inSlot?: boolean;
-}
-
-export default function DraggablePlayer({ player, inSlot }: Props) {
+export default function DraggablePlayer({ player }: { player: Player }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `player-${player.id}`,
     data: { playerId: player.id },
@@ -17,15 +14,14 @@ export default function DraggablePlayer({ player, inSlot }: Props) {
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-grab active:cursor-grabbing select-none transition-opacity ${
-        isDragging ? "opacity-30" : "opacity-100"
-      } ${inSlot
-        ? "bg-[#00d4ff]/10 border border-[#00d4ff]/40"
-        : "bg-[#242424] border border-[#333]"
+      className={`flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl border select-none cursor-grab active:cursor-grabbing transition-all ${
+        isDragging
+          ? "opacity-20 scale-95"
+          : "border-[#242424] bg-[#161616] hover:border-[#2e2e2e] hover:bg-[#1c1c1c]"
       }`}
     >
-      <span className="text-lg">{player.character_avatar}</span>
-      <span className="text-white text-xs font-semibold truncate max-w-[80px]">{player.name}</span>
+      <span className="text-base leading-none">{player.character_avatar}</span>
+      <span className="text-white text-xs font-semibold">{player.name}</span>
     </div>
   );
 }

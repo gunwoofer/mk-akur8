@@ -35,8 +35,13 @@ export const api = {
       }),
   },
   history: {
-    list: () =>
-      apiFetch<HistoryEntry[]>("/api/history"),
+    list: (params?: { limit?: number; offset?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.limit !== undefined) qs.set("limit", String(params.limit));
+      if (params?.offset !== undefined) qs.set("offset", String(params.offset));
+      const query = qs.toString();
+      return apiFetch<HistoryEntry[]>(`/api/history${query ? `?${query}` : ""}`);
+    },
   },
   seed: {
     run: () =>

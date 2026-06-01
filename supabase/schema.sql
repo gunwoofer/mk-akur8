@@ -51,10 +51,15 @@ on conflict do nothing;
 -- BAYESIAN RATING STORED PROCEDURE
 -- Fires after every insert into race_results.
 --
--- Formula:  R = ( (C * m) + SUM(player_points) ) / (C + v)
---   C  = average gp_played across all players (confidence weight)
---   m  = global mean score of all positions ever played
+-- Formula:  R = SUM(player_points) / (C + v)
+--   C  = 20  fixed phantom games at 0 pts (confidence prior)
 --   v  = this player's total GP count
+--
+-- Semantics: every player starts as if they played 20 races
+-- scoring zero. Rating is earned purely through real results.
+-- Max rating approaches 15 (P1 every race) asymptotically.
+-- A newcomer needs ~20 real GPs to dilute the prior enough
+-- to challenge a consistent front-runner with the same count.
 -- =============================================================
 
 create or replace function recalculate_ratings()
@@ -62,47 +67,24 @@ returns trigger
 language plpgsql
 as $$
 declare
-  v_global_avg_gp   float;
-  v_global_avg_pts  float;
-  rec               record;
-  v_sum_points      float;
-  v_gp_count        int;
-  v_new_rating      float;
+  rec          record;
+  v_sum_points float;
+  v_gp_count   int;
 begin
-  -- 1. Global average GP count across all players (C)
-  select coalesce(avg(gp_played), 1)
-    into v_global_avg_gp
-    from players;
-
-  -- 2. Global average points per race entry (m)
-  --    = avg of all position_points joined to all race_results
-  select coalesce(avg(pp.points), 0)
-    into v_global_avg_pts
-    from race_results rr
-    join position_points pp on pp.position = rr.position;
-
-  -- 3. For each player that appears in the triggering match,
-  --    recalculate their full rating.
   for rec in
     select distinct player_id
       from race_results
      where match_id = new.match_id
   loop
-    -- Sum of all points this player has ever scored
     select coalesce(sum(pp.points), 0), count(*)
       into v_sum_points, v_gp_count
       from race_results rr
       join position_points pp on pp.position = rr.position
      where rr.player_id = rec.player_id;
 
-    -- Bayesian average
-    -- R = ( (C * m) + sum(points) ) / (C + v)
-    v_new_rating := (
-      (v_global_avg_gp * v_global_avg_pts) + v_sum_points
-    ) / (v_global_avg_gp + v_gp_count);
-
+    -- R = sum_points / (20 + gp_count)
     update players
-       set rating    = round(v_new_rating::numeric, 4),
+       set rating    = round((v_sum_points / (20.0 + v_gp_count))::numeric, 4),
            gp_played = v_gp_count
      where id = rec.player_id;
   end loop;

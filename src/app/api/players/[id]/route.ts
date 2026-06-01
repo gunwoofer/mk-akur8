@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase-server";
 
+interface ResultRow {
+  position: number;
+  match_id: string;
+  matches: { played_at: string } | null;
+}
+
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -27,24 +33,23 @@ export async function GET(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 404 });
 
-  // All-time results for aggregate stats
   const { data: allResults } = await supabase
     .from("race_results")
     .select("position, match_id, matches(played_at)")
     .eq("player_id", id)
     .order("matches(played_at)", { ascending: false });
 
-  const allPositions = (allResults ?? []).map((r: Record<string, unknown>) => r.position as number);
+  const rows = (allResults as unknown as ResultRow[]) ?? [];
+  const allPositions = rows.map((r) => r.position);
   const podiums = allPositions.filter((p) => p <= 3).length;
   const worstFinish = allPositions.length ? Math.max(...allPositions) : 0;
   const avgPlacement = allPositions.length
     ? allPositions.reduce((a, b) => a + b, 0) / allPositions.length
     : 0;
 
-  // Last 10 GPs for the form guide timeline
-  const recentResults = (allResults ?? []).slice(0, 10).map((r: Record<string, unknown>) => ({
+  const recentResults = rows.slice(0, 10).map((r) => ({
     match_id: r.match_id,
-    played_at: (r.matches as Record<string, unknown> | null)?.played_at ?? null,
+    played_at: r.matches?.played_at ?? null,
     position: r.position,
   }));
 
