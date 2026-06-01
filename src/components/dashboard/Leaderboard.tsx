@@ -73,7 +73,7 @@ export default function Leaderboard() {
       </div>
 
       {/* Player list — scrollable so all rows are reachable */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto scrollbar-hide">
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="flex flex-col items-center">

@@ -41,6 +41,14 @@ body {
   background: var(--neon-blue-dim);
 }
 
+/* Hide scrollbar while keeping scroll functionality */
+.scrollbar-hide {
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Neon glow utility */
 .neon-text {
   color: var(--neon-blue);
