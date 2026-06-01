@@ -31,7 +31,7 @@ export default function PositionSlot({ position, player, onClear }: Props) {
       {...(player ? listeners : {})}
       {...(player ? attributes : {})}
       className={`flex items-center gap-2.5 h-10 rounded-xl px-3 select-none transition-all ${
-        player ? "cursor-grab active:cursor-grabbing" : "cursor-default"
+        player ? "cursor-grab active:cursor-grabbing touch-none" : "cursor-default"
       } ${isDragging ? "opacity-20 scale-[0.97]" : ""} ${
         isOver
           ? "border border-[#00d4ff] bg-[#00d4ff]/10 shadow-[0_0_14px_rgba(0,212,255,0.12)]"

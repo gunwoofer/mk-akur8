@@ -14,7 +14,7 @@ export default function DraggablePlayer({ player }: { player: Player }) {
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      className={`flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl border select-none cursor-grab active:cursor-grabbing transition-all ${
+      className={`flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl border select-none cursor-grab active:cursor-grabbing transition-all touch-none ${
         isDragging
           ? "opacity-20 scale-95"
           : "border-[#242424] bg-[#161616] hover:border-[#2e2e2e] hover:bg-[#1c1c1c]"
