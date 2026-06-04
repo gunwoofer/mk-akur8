@@ -2,7 +2,12 @@
 
 import { motion } from "framer-motion";
 
-export default function SuccessStep({ onReset }: { onReset: () => void }) {
+interface Props {
+  onReset: () => void;
+  onRematch: () => void;
+}
+
+export default function SuccessStep({ onReset, onRematch }: Props) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[65vh] px-8 text-center gap-5">
       <motion.div
@@ -26,16 +31,27 @@ export default function SuccessStep({ onReset }: { onReset: () => void }) {
         </p>
       </motion.div>
 
-      <motion.button
+      <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.45 }}
-        onClick={onReset}
-        whileTap={{ scale: 0.97 }}
-        className="mt-2 px-6 py-3 bg-[#161616] border border-[#252525] text-white rounded-2xl font-semibold text-sm hover:border-[#333] transition-colors"
+        className="flex flex-col gap-3 w-full max-w-xs mt-2"
       >
-        Submit Another GP
-      </motion.button>
+        <motion.button
+          onClick={onRematch}
+          whileTap={{ scale: 0.97 }}
+          className="w-full px-6 py-3 bg-[#00d4ff] text-black rounded-2xl font-bold text-sm"
+        >
+          🔁 Rematch — Same Players
+        </motion.button>
+        <motion.button
+          onClick={onReset}
+          whileTap={{ scale: 0.97 }}
+          className="w-full px-6 py-3 bg-[#161616] border border-[#252525] text-white rounded-2xl font-semibold text-sm hover:border-[#333] transition-colors"
+        >
+          New GP
+        </motion.button>
+      </motion.div>
     </div>
   );
 }

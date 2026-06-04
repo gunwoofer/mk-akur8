@@ -79,7 +79,7 @@ export default function SubmitTab() {
               onBack={() => flow.setStep(1)}
             />
           )}
-          {flow.step === 3 && <SuccessStep onReset={flow.reset} />}
+          {flow.step === 3 && <SuccessStep onReset={flow.reset} onRematch={flow.rematch} />}
         </motion.div>
       </AnimatePresence>
     </div>

@@ -25,6 +25,7 @@ export function useSubmitFlow() {
   const [slots, setSlots] = useState<Slot[]>(emptySlots);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [lastResults, setLastResults] = useState<Slot[]>([]);
 
   const fetchPlayers = useCallback(async () => {
     setLoadingPlayers(true);
@@ -99,6 +100,7 @@ export function useSubmitFlow() {
         });
       }
 
+      setLastResults(slots.filter((s) => s.playerId !== null));
       setStep(3);
       return true;
     } catch (err) {
@@ -124,9 +126,20 @@ export function useSubmitFlow() {
     setStep(2);
   }, [players, selected]);
 
+  const rematch = useCallback(() => {
+    setSlots(
+      Array.from({ length: 24 }, (_, i) => ({
+        position: i + 1,
+        playerId: lastResults.find((s) => s.position === i + 1)?.playerId ?? null,
+      }))
+    );
+    setStep(2);
+  }, [lastResults]);
+
   const reset = () => {
     setSelected(new Set());
     setSlots(emptySlots());
+    setLastResults([]);
     setStep(1);
     setSubmitError(null);
   };
@@ -141,7 +154,7 @@ export function useSubmitFlow() {
     selected, toggleSelect,
     slots, placePlayer, clearSlot,
     submitting, submitError,
-    submit, reset,
+    submit, reset, rematch,
     placedIds,
     benchPlayers: players.filter((p) => selected.has(p.id) && !placedIds.has(p.id)),
     playerById: (id: string) => players.find((p) => p.id === id) ?? null,
