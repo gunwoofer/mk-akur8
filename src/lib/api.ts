@@ -25,6 +25,12 @@ export const api = {
       apiFetch<{ deleted: string }>(`/api/players/${id}`, { method: "DELETE" }),
     stats: (id: string) =>
       apiFetch<PlayerStats>(`/api/players/${id}`),
+    updateAvatar: (id: string, avatarUrl: string | null) =>
+      apiFetch<Player>(`/api/players/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatar_url: avatarUrl }),
+      }),
   },
   matches: {
     submit: (results: SubmitResult[]) =>

@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import type { Player } from "@/types";
+import AvatarDisplay from "@/components/AvatarDisplay";
 
 interface Props {
   players: Player[];
@@ -45,7 +46,7 @@ export default function LobbyStep({ players, loading, error, selected, onToggle,
                 on ? "border-[#00d4ff]/30 bg-[#00d4ff]/8" : "border-[#1e1e1e] bg-[#141414] active:bg-[#181818]"
               }`}
             >
-              <span className="text-2xl shrink-0">{p.character_avatar}</span>
+              <AvatarDisplay avatarUrl={p.avatar_url} characterAvatar={p.character_avatar} imgClassName="w-8 h-8" emojiClassName="text-2xl" />
               <div className="flex-1 min-w-0">
                 <p className="text-white text-sm font-semibold truncate">{p.name}</p>
                 <p className="text-gray-600 text-xs">{p.gp_played} GPs · {p.rating.toFixed(2)} pts</p>

@@ -3,9 +3,10 @@
 import { useEffect, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useFireworks } from "@/hooks/useFireworks";
+import AvatarDisplay from "@/components/AvatarDisplay";
 
 interface Props {
-  winner: { name: string; character_avatar: string };
+  winner: { name: string; character_avatar: string; avatar_url?: string | null };
   onDone: () => void;
 }
 
@@ -86,9 +87,14 @@ export default function CelebrationOverlay({ winner, onDone }: Props) {
           🏆 Grand Prix Winner
         </p>
 
-        {/* Static emoji — infinite animations are very expensive on A7 chip */}
-        <div className="text-[7rem] leading-none select-none mb-6">
-          {winner.character_avatar}
+        {/* Avatar — photo if available, emoji fallback. Static, no animation (A7 chip) */}
+        <div className="flex justify-center mb-6">
+          <AvatarDisplay
+            avatarUrl={winner.avatar_url}
+            characterAvatar={winner.character_avatar}
+            imgClassName="w-32 h-32 border-4 border-yellow-400/60"
+            emojiClassName="text-[7rem] leading-none select-none"
+          />
         </div>
 
         <p

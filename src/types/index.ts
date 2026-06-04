@@ -2,6 +2,7 @@ export interface Player {
   id: string;
   name: string;
   character_avatar: string;
+  avatar_url?: string | null;
   rating: number;
   gp_played: number;
 }
@@ -39,6 +40,7 @@ export interface HistoryResult {
   position: number;
   name: string;
   avatar: string;
+  avatar_url?: string | null;
 }
 
 export interface HistoryEntry {

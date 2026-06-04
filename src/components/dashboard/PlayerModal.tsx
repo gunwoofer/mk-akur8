@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import type { PlayerStats } from "@/types";
+import AvatarDisplay from "@/components/AvatarDisplay";
 
 const POSITION_COLORS: Record<number, string> = {
   1: "#FFD700", 2: "#C0C0C0", 3: "#CD7F32",
@@ -59,7 +60,7 @@ export default function PlayerModal({ stats, playerName, onClose }: Props) {
         {/* Header — always visible */}
         <div className="flex items-center p-6 border-b border-[#2a2a2a] shrink-0">
           {player && (
-            <span className="text-5xl mr-4">{player.character_avatar}</span>
+            <AvatarDisplay avatarUrl={player.avatar_url} characterAvatar={player.character_avatar} imgClassName="w-16 h-16 mr-4" emojiClassName="text-5xl mr-4" />
           )}
           <div className="flex-1 min-w-0">
             <h2 className="text-white font-black text-3xl italic tracking-tight truncate">

@@ -7,6 +7,23 @@ interface ResultRow {
   matches: { played_at: string } | null;
 }
 
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const { avatar_url } = await req.json() as { avatar_url: string | null };
+  const supabase = getServerSupabase();
+  const { data, error } = await supabase
+    .from("players")
+    .update({ avatar_url })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data);
+}
+
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

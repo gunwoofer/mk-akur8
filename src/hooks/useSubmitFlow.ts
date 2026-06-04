@@ -92,7 +92,7 @@ export function useSubmitFlow() {
             await ch.send({
               type: "broadcast",
               event: "gp_submitted",
-              payload: { name: winner.name, character_avatar: winner.character_avatar },
+              payload: { name: winner.name, character_avatar: winner.character_avatar, avatar_url: winner.avatar_url },
             });
             supabase.removeChannel(ch);
           }

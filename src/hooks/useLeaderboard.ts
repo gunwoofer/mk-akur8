@@ -12,6 +12,7 @@ export interface RankedPlayer extends Player {
 export interface CelebrationWinner {
   name: string;
   character_avatar: string;
+  avatar_url?: string | null;
 }
 
 function sortByRating(players: Player[]): Player[] {
@@ -71,7 +72,7 @@ export function useLeaderboard() {
         if (gpCommitted) {
           const winner = latestMatch!.results[0]; // ordered by position asc — first is best finisher
           if (winner) {
-            setCelebrationWinner((prev) => prev ?? { name: winner.name, character_avatar: winner.avatar });
+            setCelebrationWinner((prev) => prev ?? { name: winner.name, character_avatar: winner.avatar, avatar_url: winner.avatar_url });
           }
           lastMatchIdRef.current = latestId;
         }
@@ -107,7 +108,7 @@ export function useLeaderboard() {
       // the primary celebration trigger. The polling path below is the fallback.
       .on("broadcast", { event: "gp_submitted" }, ({ payload }) => {
         if (payload?.name) {
-          setCelebrationWinner((prev) => prev ?? { name: payload.name, character_avatar: payload.character_avatar });
+          setCelebrationWinner((prev) => prev ?? { name: payload.name, character_avatar: payload.character_avatar, avatar_url: payload.avatar_url });
         }
         doFetch();
       })

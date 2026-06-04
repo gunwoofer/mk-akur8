@@ -4,7 +4,7 @@ import { getServerSupabase } from "@/lib/supabase-server";
 interface RaceResultRow {
   player_id: string;
   position: number;
-  players: { name: string; character_avatar: string } | null;
+  players: { name: string; character_avatar: string; avatar_url: string | null } | null;
 }
 
 export async function GET(req: NextRequest) {
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     (matches ?? []).map(async (match) => {
       const { data: results } = await supabase
         .from("race_results")
-        .select("player_id, position, players(name, character_avatar)")
+        .select("player_id, position, players(name, character_avatar, avatar_url)")
         .eq("match_id", match.id)
         .order("position");
 
@@ -38,6 +38,7 @@ export async function GET(req: NextRequest) {
           position: r.position,
           name: r.players?.name ?? "Unknown",
           avatar: r.players?.character_avatar ?? "🏎️",
+          avatar_url: r.players?.avatar_url ?? null,
         })),
       };
     })

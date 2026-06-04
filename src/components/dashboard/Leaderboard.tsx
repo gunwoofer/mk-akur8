@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { api } from "@/lib/api";
 import type { PlayerStats } from "@/types";
+import AvatarDisplay from "@/components/AvatarDisplay";
 import PlayerModal from "./PlayerModal";
 import RankingInfoModal from "./RankingInfoModal";
 import CelebrationOverlay from "./CelebrationOverlay";
@@ -116,7 +117,7 @@ export default function Leaderboard() {
                   }}
                 >
                   <span className={`font-black text-2xl italic ${medalColor(rank)}`}>{rank}</span>
-                  <span className="text-3xl">{player.character_avatar}</span>
+                  <AvatarDisplay avatarUrl={player.avatar_url} characterAvatar={player.character_avatar} imgClassName="w-9 h-9" emojiClassName="text-3xl" />
                   <div className="min-w-0">
                     <p className="text-white font-bold text-xl italic truncate leading-tight">
                       {player.name.toUpperCase()}

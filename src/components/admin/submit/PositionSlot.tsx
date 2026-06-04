@@ -2,6 +2,7 @@
 
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import type { Player } from "@/types";
+import AvatarDisplay from "@/components/AvatarDisplay";
 
 interface Props {
   position: number;
@@ -46,7 +47,7 @@ export default function PositionSlot({ position, player, onClear }: Props) {
 
       {player ? (
         <>
-          <span className="text-base shrink-0 leading-none">{player.character_avatar}</span>
+          <AvatarDisplay avatarUrl={player.avatar_url} characterAvatar={player.character_avatar} imgClassName="w-5 h-5" emojiClassName="text-base shrink-0 leading-none" />
           <span className="text-white text-xs font-semibold flex-1 min-w-0 truncate">{player.name}</span>
           {onClear && (
             <button
