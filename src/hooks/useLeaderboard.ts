@@ -9,10 +9,14 @@ export interface RankedPlayer extends Player {
   rankDelta: number;
 }
 
-export interface CelebrationWinner {
+export interface WinnerEntry {
   name: string;
   character_avatar: string;
   avatar_url?: string | null;
+}
+
+export interface CelebrationWinner {
+  winners: WinnerEntry[];
 }
 
 function sortByRating(players: Player[]): Player[] {
@@ -70,9 +74,12 @@ export function useLeaderboard() {
 
       if (isNewGP) {
         if (gpCommitted) {
-          const winner = latestMatch!.results[0]; // ordered by position asc — first is best finisher
-          if (winner) {
-            setCelebrationWinner((prev) => prev ?? { name: winner.name, character_avatar: winner.avatar, avatar_url: winner.avatar_url });
+          const topPosition = latestMatch!.results[0]?.position;
+          const topResults = latestMatch!.results.filter((r) => r.position === topPosition);
+          if (topResults.length > 0) {
+            setCelebrationWinner((prev) => prev ?? {
+              winners: topResults.map((r) => ({ name: r.name, character_avatar: r.avatar, avatar_url: r.avatar_url })),
+            });
           }
           lastMatchIdRef.current = latestId;
         }
@@ -107,8 +114,8 @@ export function useLeaderboard() {
       // The broadcast arrives before postgres_changes and carries the winner — this is
       // the primary celebration trigger. The polling path below is the fallback.
       .on("broadcast", { event: "gp_submitted" }, ({ payload }) => {
-        if (payload?.name) {
-          setCelebrationWinner((prev) => prev ?? { name: payload.name, character_avatar: payload.character_avatar, avatar_url: payload.avatar_url });
+        if (payload?.winners?.length) {
+          setCelebrationWinner((prev) => prev ?? { winners: payload.winners });
         }
         doFetch();
       })

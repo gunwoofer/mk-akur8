@@ -4,9 +4,10 @@ import { useEffect, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useFireworks } from "@/hooks/useFireworks";
 import AvatarDisplay from "@/components/AvatarDisplay";
+import type { CelebrationWinner } from "@/hooks/useLeaderboard";
 
 interface Props {
-  winner: { name: string; character_avatar: string; avatar_url?: string | null };
+  winner: CelebrationWinner;
   onDone: () => void;
 }
 
@@ -43,6 +44,19 @@ const CONGRATS_TEMPLATES = [
   "Pure, uncut, undefeatable skill. That's just {name}. 🧬",
 ];
 
+const CONGRATS_TEMPLATES_TIE = [
+  "Unprecedented! {name1} & {name2} share the throne! 👑",
+  "The kart gods couldn't choose — {name1} & {name2} tie it! 🎲",
+  "Two legends, one trophy. {name1} and {name2} are unstoppable! 🏆",
+  "Even the blue shell couldn't separate {name1} & {name2}! 💙",
+  "History made — {name1} & {name2} finish level! 📖",
+  "The office has two champions today: {name1} & {name2}! 🎉",
+  "Call it a draw — {name1} and {name2} refuse to lose! 🤝",
+  "Identical points, identical glory. {name1} = {name2}! ⚖️",
+  "Rainbow Road treated {name1} & {name2} exactly the same! 🌈",
+  "Not one winner, but two — {name1} & {name2} share P1! 🥇🥇",
+];
+
 const DISPLAY_MS = 7000;
 
 export default function CelebrationOverlay({ winner, onDone }: Props) {
@@ -54,10 +68,18 @@ export default function CelebrationOverlay({ winner, onDone }: Props) {
     return () => clearTimeout(id);
   }, [onDone]);
 
+  const isTie = winner.winners.length > 1;
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const message = useMemo(() => {
+    if (isTie) {
+      const template = CONGRATS_TEMPLATES_TIE[Math.floor(Math.random() * CONGRATS_TEMPLATES_TIE.length)];
+      return template
+        .replace(/{name1}/g, winner.winners[0].name)
+        .replace(/{name2}/g, winner.winners[1]?.name ?? "");
+    }
     const template = CONGRATS_TEMPLATES[Math.floor(Math.random() * CONGRATS_TEMPLATES.length)];
-    return template.replace(/{name}/g, winner.name);
+    return template.replace(/{name}/g, winner.winners[0].name);
   }, []);
 
   return (
@@ -66,7 +88,6 @@ export default function CelebrationOverlay({ winner, onDone }: Props) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
-      // inset-0 expanded to top-0 right-0 bottom-0 left-0 by PostCSS for iOS 12
       className="fixed inset-0 z-[200] flex items-center justify-center cursor-pointer"
       onClick={onDone}
     >
@@ -84,28 +105,46 @@ export default function CelebrationOverlay({ winner, onDone }: Props) {
         style={{ boxShadow: "0 0 60px rgba(255,215,0,0.15)" }}
       >
         <p className="text-yellow-400 font-black tracking-[0.3em] uppercase text-base mb-6">
-          🏆 Grand Prix Winner
+          {isTie ? "🏆 Grand Prix — It's a Tie!" : "🏆 Grand Prix Winner"}
         </p>
 
-        {/* Avatar — photo if available, emoji fallback. Static, no animation (A7 chip) */}
-        <div className="flex justify-center mb-6">
-          <AvatarDisplay
-            avatarUrl={winner.avatar_url}
-            characterAvatar={winner.character_avatar}
-            imgClassName="w-32 h-32 border-4 border-yellow-400/60"
-            emojiClassName="text-[7rem] leading-none select-none"
-          />
-        </div>
+        {isTie ? (
+          /* Two winners side by side */
+          <div className="flex justify-center gap-10 mb-6">
+            {winner.winners.map((w) => (
+              <div key={w.name} className="flex flex-col items-center gap-3">
+                <AvatarDisplay
+                  avatarUrl={w.avatar_url}
+                  characterAvatar={w.character_avatar}
+                  imgClassName="w-20 h-20 border-4 border-yellow-400/60"
+                  emojiClassName="text-[5rem] leading-none select-none"
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* Single winner — full size */
+          <div className="flex justify-center mb-6">
+            <AvatarDisplay
+              avatarUrl={winner.winners[0].avatar_url}
+              characterAvatar={winner.winners[0].character_avatar}
+              imgClassName="w-32 h-32 border-4 border-yellow-400/60"
+              emojiClassName="text-[7rem] leading-none select-none"
+            />
+          </div>
+        )}
 
         <p
           className="font-black italic tracking-tight leading-none mb-6"
           style={{
-            fontSize: "4.5rem",
+            fontSize: isTie ? "3rem" : "4.5rem",
             color: "#ffffff",
             textShadow: "0 0 24px rgba(0,212,255,0.9), 0 0 60px rgba(0,212,255,0.4)",
           }}
         >
-          {winner.name.toUpperCase()}
+          {isTie
+            ? winner.winners.map((w) => w.name.toUpperCase()).join(" & ")
+            : winner.winners[0].name.toUpperCase()}
         </p>
 
         <p className="text-gray-300 text-lg leading-snug max-w-md mx-auto mb-6">

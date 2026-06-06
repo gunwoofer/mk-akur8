@@ -83,14 +83,16 @@ export function useSubmitFlow() {
     try {
       await api.matches.submit(results);
 
-      // DB is fully committed at this point. Push winner to the dashboard immediately
+      // DB is fully committed at this point. Push winner(s) to the dashboard immediately
       // via Supabase broadcast — no polling lag, no dependency on postgres_changes.
       const winnerSlot = slots
         .filter((s) => s.playerIds.length > 0)
         .sort((a, b) => a.position - b.position)[0];
-      const winnerId = winnerSlot?.playerIds[0];
-      const winner = winnerId ? players.find((p) => p.id === winnerId) : null;
-      if (winner) {
+      const winners = (winnerSlot?.playerIds ?? [])
+        .map((id) => players.find((p) => p.id === id))
+        .filter((p): p is Player => p !== null)
+        .map(({ name, character_avatar, avatar_url }) => ({ name, character_avatar, avatar_url }));
+      if (winners.length > 0) {
         const supabase = getSupabase();
         const ch = supabase.channel("leaderboard-live");
         ch.subscribe(async (status) => {
@@ -98,7 +100,7 @@ export function useSubmitFlow() {
             await ch.send({
               type: "broadcast",
               event: "gp_submitted",
-              payload: { name: winner.name, character_avatar: winner.character_avatar, avatar_url: winner.avatar_url },
+              payload: { winners },
             });
             supabase.removeChannel(ch);
           }
