@@ -9,11 +9,11 @@ export type Step = 1 | 2 | 3;
 
 export interface Slot {
   position: number;
-  playerId: string | null;
+  playerIds: string[];
 }
 
 function emptySlots(): Slot[] {
-  return Array.from({ length: 24 }, (_, i) => ({ position: i + 1, playerId: null }));
+  return Array.from({ length: 24 }, (_, i) => ({ position: i + 1, playerIds: [] }));
 }
 
 export function useSubmitFlow() {
@@ -48,26 +48,30 @@ export function useSubmitFlow() {
       return next;
     });
 
+  // Remove player from current slot, then add to target slot.
+  // If target already has players, they tie at that position.
   const placePlayer = (playerId: string, targetPosition: number) =>
     setSlots((prev) => {
-      const next = prev.map((s) => ({ ...s }));
-      const fromSlot = next.find((s) => s.playerId === playerId);
-      const toSlot = next.find((s) => s.position === targetPosition)!;
-      const displaced = toSlot.playerId;
-      toSlot.playerId = playerId;
-      if (fromSlot) fromSlot.playerId = displaced; // swap; bench-drag keeps displaced on bench
-      return next;
+      const withoutPlayer = prev.map((s) => ({
+        ...s,
+        playerIds: s.playerIds.filter((id) => id !== playerId),
+      }));
+      return withoutPlayer.map((s) =>
+        s.position === targetPosition
+          ? { ...s, playerIds: [...s.playerIds, playerId] }
+          : s
+      );
     });
 
-  const clearSlot = (position: number) =>
+  const clearPlayer = (playerId: string) =>
     setSlots((prev) =>
-      prev.map((s) => (s.position === position ? { ...s, playerId: null } : s))
+      prev.map((s) => ({ ...s, playerIds: s.playerIds.filter((id) => id !== playerId) }))
     );
 
   const submit = async (): Promise<boolean> => {
-    const results = slots
-      .filter((s) => s.playerId !== null)
-      .map((s) => ({ player_id: s.playerId!, position: s.position }));
+    const results = slots.flatMap((s) =>
+      s.playerIds.map((id) => ({ player_id: id, position: s.position }))
+    );
 
     if (results.length === 0) {
       setSubmitError("Place at least one player before submitting.");
@@ -82,9 +86,10 @@ export function useSubmitFlow() {
       // DB is fully committed at this point. Push winner to the dashboard immediately
       // via Supabase broadcast — no polling lag, no dependency on postgres_changes.
       const winnerSlot = slots
-        .filter((s) => s.playerId !== null)
+        .filter((s) => s.playerIds.length > 0)
         .sort((a, b) => a.position - b.position)[0];
-      const winner = winnerSlot?.playerId ? players.find((p) => p.id === winnerSlot.playerId) : null;
+      const winnerId = winnerSlot?.playerIds[0];
+      const winner = winnerId ? players.find((p) => p.id === winnerId) : null;
       if (winner) {
         const supabase = getSupabase();
         const ch = supabase.channel("leaderboard-live");
@@ -100,7 +105,7 @@ export function useSubmitFlow() {
         });
       }
 
-      setLastResults(slots.filter((s) => s.playerId !== null));
+      setLastResults(slots.filter((s) => s.playerIds.length > 0));
       setStep(3);
       return true;
     } catch (err) {
@@ -112,7 +117,6 @@ export function useSubmitFlow() {
   };
 
   // Pre-fill positions 1…N with the selected players sorted by current rating.
-  // Called instead of setStep(2) so the user starts with a sensible default.
   const goToPositions = useCallback(() => {
     const ordered = [...players]
       .filter((p) => selected.has(p.id))
@@ -120,7 +124,7 @@ export function useSubmitFlow() {
     setSlots(
       Array.from({ length: 24 }, (_, i) => ({
         position: i + 1,
-        playerId: ordered[i]?.id ?? null,
+        playerIds: ordered[i] ? [ordered[i].id] : [],
       }))
     );
     setStep(2);
@@ -128,10 +132,10 @@ export function useSubmitFlow() {
 
   const rematch = useCallback(() => {
     setSlots(
-      Array.from({ length: 24 }, (_, i) => ({
-        position: i + 1,
-        playerId: lastResults.find((s) => s.position === i + 1)?.playerId ?? null,
-      }))
+      Array.from({ length: 24 }, (_, i) => {
+        const last = lastResults.find((s) => s.position === i + 1);
+        return { position: i + 1, playerIds: last?.playerIds ?? [] };
+      })
     );
     setStep(2);
   }, [lastResults]);
@@ -144,19 +148,16 @@ export function useSubmitFlow() {
     setSubmitError(null);
   };
 
-  const placedIds = new Set(
-    slots.map((s) => s.playerId).filter((id): id is string => id !== null)
-  );
+  const placedIds = new Set(slots.flatMap((s) => s.playerIds));
 
   return {
     step, setStep, goToPositions,
     players, loadingPlayers, fetchError,
     selected, toggleSelect,
-    slots, placePlayer, clearSlot,
+    slots, placePlayer, clearPlayer,
     submitting, submitError,
     submit, reset, rematch,
     placedIds,
-    benchPlayers: players.filter((p) => selected.has(p.id) && !placedIds.has(p.id)),
     playerById: (id: string) => players.find((p) => p.id === id) ?? null,
   };
 }

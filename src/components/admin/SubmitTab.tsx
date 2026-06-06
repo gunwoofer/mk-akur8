@@ -68,13 +68,12 @@ export default function SubmitTab() {
           {flow.step === 2 && (
             <PositionsStep
               slots={flow.slots}
-              benchPlayers={flow.benchPlayers}
               playerById={flow.playerById}
               placedIds={flow.placedIds}
               submitting={flow.submitting}
               submitError={flow.submitError}
               onPlacePlayer={flow.placePlayer}
-              onClearSlot={flow.clearSlot}
+              onClearPlayer={flow.clearPlayer}
               onSubmit={flow.submit}
               onBack={() => flow.setStep(1)}
             />

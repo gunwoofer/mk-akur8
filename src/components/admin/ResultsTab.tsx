@@ -143,15 +143,18 @@ export default function ResultsTab() {
                       <p className="text-gray-500 text-xs">{formatDate(h.played_at)}</p>
                     </div>
                     <div className="divide-y divide-[#2a2a2a]">
-                      {h.results.map((r) => (
+                      {h.results.map((r) => {
+                        const tied = h.results.filter((x) => x.position === r.position).length > 1;
+                        return (
                         <div key={r.player_id} className="flex items-center gap-3 px-4 py-2">
-                          <span className={`font-bold text-sm w-5 ${r.position <= 3 ? "text-yellow-400" : "text-gray-600"}`}>
-                            P{r.position}
+                          <span className={`font-bold text-sm w-6 ${r.position <= 3 ? "text-yellow-400" : "text-gray-600"}`}>
+                            {tied ? `=${r.position}` : `P${r.position}`}
                           </span>
                           <span>{r.avatar}</span>
                           <span className="text-white text-sm">{r.name}</span>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
