@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { Player, HistoryEntry } from "@/types";
+import AvatarDisplay from "@/components/AvatarDisplay";
 
 type SubView = "ranking" | "history";
 
@@ -121,7 +122,7 @@ export default function ResultsTab() {
                 }`}>
                   {i + 1}
                 </span>
-                <span className="text-2xl">{p.character_avatar}</span>
+                <AvatarDisplay avatarUrl={p.avatar_url} characterAvatar={p.character_avatar} imgClassName="w-8 h-8" emojiClassName="text-2xl" />
                 <div className="flex-1">
                   <p className="text-white font-semibold text-sm">{p.name}</p>
                   <p className="text-gray-500 text-xs">{p.gp_played} GPs</p>
