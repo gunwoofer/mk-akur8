@@ -9,6 +9,7 @@ import AvatarDisplay from "@/components/AvatarDisplay";
 import PlayerModal from "./PlayerModal";
 import RankingInfoModal from "./RankingInfoModal";
 import CelebrationOverlay from "./CelebrationOverlay";
+import GPRecapOverlay from "./GPRecapOverlay";
 
 function medalColor(rank: number) {
   if (rank === 1) return "text-yellow-400";
@@ -18,7 +19,7 @@ function medalColor(rank: number) {
 }
 
 export default function Leaderboard() {
-  const { players, loading, error, celebrationWinner, dismissCelebration } = useLeaderboard();
+  const { players, loading, error, celebrationWinner, dismissCelebration, gpRecap, clearRecap } = useLeaderboard();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showInfo, setShowInfo] = useState(false);
   const [statsCache, setStatsCache] = useState<Record<string, PlayerStats>>({});
@@ -159,6 +160,12 @@ export default function Leaderboard() {
             winner={celebrationWinner}
             onDone={dismissCelebration}
           />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {!celebrationWinner && gpRecap && (
+          <GPRecapOverlay entries={gpRecap} onDone={clearRecap} />
         )}
       </AnimatePresence>
     </div>

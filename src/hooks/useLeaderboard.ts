@@ -19,6 +19,16 @@ export interface CelebrationWinner {
   winners: WinnerEntry[];
 }
 
+export interface RecapEntry {
+  player_id: string;
+  position: number;
+  name: string;
+  character_avatar: string;
+  avatar_url?: string | null;
+  ratingBefore: number;
+  ratingAfter: number;
+}
+
 function sortByRating(players: Player[]): Player[] {
   return [...players].sort(
     (a, b) => b.rating - a.rating || a.name.localeCompare(b.name)
@@ -30,13 +40,16 @@ export function useLeaderboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [celebrationWinner, setCelebrationWinner] = useState<CelebrationWinner | null>(null);
+  const [gpRecap, setGpRecap] = useState<RecapEntry[] | null>(null);
 
-  // Always-current ranks — snapshot of the last settled fetch; captured as the
-  // frozen baseline when a new GP arrives so subsequent polls keep showing deltas.
+  // Always-current ranks — overwritten on every settled fetch.
   const liveRanksRef = useRef<Record<string, number>>({});
-  // Ranks just before the latest GP — only updated on a new committed GP.
-  // Delta display uses this so arrows persist until the next GP.
+  // Always-current ratings — overwritten on every settled fetch.
+  const liveRatingsRef = useRef<Record<string, number>>({});
+  // Ranks just before the latest GP — frozen at gpCommitted so rank arrows persist.
   const frozenBaselineRef = useRef<Record<string, number>>({});
+  // Ratings just before the latest GP — used to compute recap deltas.
+  const frozenRatingsRef = useRef<Record<string, number>>({});
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Tracks the last match UUID we displayed; undefined until the first fetch completes.
@@ -58,8 +71,9 @@ export function useLeaderboard() {
       const gpCommitted = isNewGP && (latestMatch?.results.length ?? 0) > 0;
 
       if (gpCommitted) {
-        // Freeze the pre-GP rankings so delta arrows stay visible until the next GP.
+        // Freeze pre-GP ranks and ratings before overwriting the live refs below.
         frozenBaselineRef.current = { ...liveRanksRef.current };
+        frozenRatingsRef.current = { ...liveRatingsRef.current };
       }
 
       const frozen = frozenBaselineRef.current;
@@ -70,7 +84,9 @@ export function useLeaderboard() {
           : frozen[p.id] - (i + 1),
       }));
 
+      // Update live refs to post-GP values (after frozen snapshots are captured).
       liveRanksRef.current = Object.fromEntries(sorted.map((p, i) => [p.id, i + 1]));
+      liveRatingsRef.current = Object.fromEntries(data.map((p) => [p.id, p.rating]));
 
       if (isNewGP) {
         if (gpCommitted) {
@@ -81,6 +97,19 @@ export function useLeaderboard() {
               winners: topResults.map((r) => ({ name: r.name, character_avatar: r.avatar, avatar_url: r.avatar_url })),
             });
           }
+
+          // Build recap: frozenRatingsRef has pre-GP, data has post-GP.
+          const recapEntries: RecapEntry[] = latestMatch!.results.map((r) => ({
+            player_id: r.player_id,
+            position: r.position,
+            name: r.name,
+            character_avatar: r.avatar,
+            avatar_url: r.avatar_url,
+            ratingBefore: frozenRatingsRef.current[r.player_id] ?? 0,
+            ratingAfter: data.find((p) => p.id === r.player_id)?.rating ?? 0,
+          }));
+          setGpRecap((prev) => prev ?? recapEntries);
+
           lastMatchIdRef.current = latestId;
         }
         // else: race_results not yet committed — don't advance ref so we retry next fetch
@@ -110,9 +139,6 @@ export function useLeaderboard() {
     const supabase = getSupabase();
     const channel = supabase
       .channel("leaderboard-live")
-      // Direct push from the admin app after a successful GP submission.
-      // The broadcast arrives before postgres_changes and carries the winner — this is
-      // the primary celebration trigger. The polling path below is the fallback.
       .on("broadcast", { event: "gp_submitted" }, ({ payload }) => {
         if (payload?.winners?.length) {
           setCelebrationWinner((prev) => prev ?? { winners: payload.winners });
@@ -130,8 +156,6 @@ export function useLeaderboard() {
     };
   }, [doFetch]);
 
-  // Polling fallback — guarantees updates even when the office network drops
-  // the WebSocket and Supabase's automatic reconnect hasn't fired yet.
   useEffect(() => {
     const id = setInterval(doFetch, 15_000);
     return () => clearInterval(id);
@@ -143,5 +167,7 @@ export function useLeaderboard() {
     error,
     celebrationWinner,
     dismissCelebration: () => setCelebrationWinner(null),
+    gpRecap,
+    clearRecap: () => setGpRecap(null),
   };
 }
