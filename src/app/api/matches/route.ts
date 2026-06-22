@@ -11,13 +11,13 @@ export async function POST(req: NextRequest) {
   const results: { player_id: string; position: number }[] = body.results;
 
   const positions = results.map((r) => r.position);
-  const uniquePositions = new Set(positions);
+  const uniquePlayerIds = new Set(results.map((r) => r.player_id));
   if (
-    uniquePositions.size !== results.length ||
-    positions.some((p) => p < 1 || p > 24)
+    uniquePlayerIds.size !== results.length ||
+    positions.some((p) => !Number.isInteger(p) || p < 1 || p > 24)
   ) {
     return NextResponse.json(
-      { error: "Positions must be unique integers between 1 and 24" },
+      { error: "Each player must appear once; positions must be integers 1–24" },
       { status: 400 }
     );
   }
