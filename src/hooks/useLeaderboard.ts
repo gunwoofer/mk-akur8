@@ -7,6 +7,7 @@ import type { Player, HistoryEntry } from "@/types";
 
 export interface RankedPlayer extends Player {
   rankDelta: number;
+  streak?: number;
 }
 
 export interface WinnerEntry {
@@ -58,9 +59,10 @@ export function useLeaderboard() {
 
   const doFetch = useCallback(async () => {
     try {
-      const [data, history] = await Promise.all([
+      const [data, history, streakData] = await Promise.all([
         api.players.list(),
         api.history.list(),
+        api.streak.get(),
       ]);
 
       const sorted = sortByRating(data);
@@ -82,6 +84,7 @@ export function useLeaderboard() {
         rankDelta: isFirstLoad || frozen[p.id] === undefined
           ? 0
           : frozen[p.id] - (i + 1),
+        streak: streakData?.player_id === p.id ? streakData.streak : undefined,
       }));
 
       // Update live refs to post-GP values (after frozen snapshots are captured).

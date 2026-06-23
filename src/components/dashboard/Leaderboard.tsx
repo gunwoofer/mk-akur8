@@ -119,10 +119,15 @@ export default function Leaderboard() {
                 >
                   <span className={`font-black text-2xl italic ${medalColor(rank)}`}>{rank}</span>
                   <AvatarDisplay avatarUrl={player.avatar_url} characterAvatar={player.character_avatar} imgClassName="w-9 h-9" emojiClassName="text-3xl" />
-                  <div className="min-w-0">
-                    <p className="text-white font-bold text-xl italic truncate leading-tight">
+                  <div className="min-w-0 flex items-center">
+                    <p className="text-white font-bold text-xl italic truncate leading-tight mr-2">
                       {player.name.toUpperCase()}
                     </p>
+                    {player.streak !== undefined && (
+                      <span className="shrink-0 text-orange-400 font-bold text-lg leading-none">
+                        🔥{player.streak}
+                      </span>
+                    )}
                   </div>
                   <p className="text-[#00d4ff] font-black text-2xl italic tabular-nums text-right">
                     {player.rating.toFixed(2)}

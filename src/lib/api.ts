@@ -49,6 +49,10 @@ export const api = {
       return apiFetch<HistoryEntry[]>(`/api/history${query ? `?${query}` : ""}`);
     },
   },
+  streak: {
+    get: () =>
+      apiFetch<{ player_id: string; streak: number } | null>("/api/streak"),
+  },
   seed: {
     run: () =>
       apiFetch<{ message: string }>("/api/seed", { method: "POST" }),
