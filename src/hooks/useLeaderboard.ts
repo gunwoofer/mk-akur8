@@ -3,9 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getSupabase } from "@/lib/supabase";
 import { api } from "@/lib/api";
-import type { Player, HistoryEntry } from "@/types";
+import type { Player, HistoryEntry, SeasonInfo, SeasonPlayer, BestStreak } from "@/types";
 
 export interface RankedPlayer extends Player {
+  rankDelta: number;
+  streak?: number;
+  season_wins: number;
+}
+
+export interface RankedSeasonPlayer extends SeasonPlayer {
   rankDelta: number;
   streak?: number;
 }
@@ -38,31 +44,34 @@ function sortByRating(players: Player[]): Player[] {
 
 export function useLeaderboard() {
   const [players, setPlayers] = useState<RankedPlayer[]>([]);
+  const [seasonPlayers, setSeasonPlayers] = useState<RankedSeasonPlayer[]>([]);
+  const [seasonInfo, setSeasonInfo] = useState<SeasonInfo | null>(null);
+  const [bestStreak, setBestStreak] = useState<BestStreak | null>(null);
+  const [view, setView] = useState<"season" | "global">("season");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [celebrationWinner, setCelebrationWinner] = useState<CelebrationWinner | null>(null);
   const [gpRecap, setGpRecap] = useState<RecapEntry[] | null>(null);
 
-  // Always-current ranks — overwritten on every settled fetch.
   const liveRanksRef = useRef<Record<string, number>>({});
-  // Always-current ratings — overwritten on every settled fetch.
   const liveRatingsRef = useRef<Record<string, number>>({});
-  // Ranks just before the latest GP — frozen at gpCommitted so rank arrows persist.
   const frozenBaselineRef = useRef<Record<string, number>>({});
-  // Ratings just before the latest GP — used to compute recap deltas.
   const frozenRatingsRef = useRef<Record<string, number>>({});
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Tracks the last match UUID we displayed; undefined until the first fetch completes.
-  // "none" signals there are no matches yet, preventing a false celebration on first GP.
+  // Season rank refs — same pattern as global
+  const liveSeasonRanksRef = useRef<Record<string, number>>({});
+  const frozenSeasonBaselineRef = useRef<Record<string, number>>({});
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastMatchIdRef = useRef<string | undefined>(undefined);
 
   const doFetch = useCallback(async () => {
     try {
-      const [data, history, streakData] = await Promise.all([
+      const [data, history, streakData, seasonData] = await Promise.all([
         api.players.list(),
         api.history.list(),
         api.streak.get(),
+        api.seasons.current(),
       ]);
 
       const sorted = sortByRating(data);
@@ -73,23 +82,45 @@ export function useLeaderboard() {
       const gpCommitted = isNewGP && (latestMatch?.results.length ?? 0) > 0;
 
       if (gpCommitted) {
-        // Freeze pre-GP ranks and ratings before overwriting the live refs below.
         frozenBaselineRef.current = { ...liveRanksRef.current };
         frozenRatingsRef.current = { ...liveRatingsRef.current };
+        frozenSeasonBaselineRef.current = { ...liveSeasonRanksRef.current };
       }
 
-      const frozen = frozenBaselineRef.current;
+      // Build season_wins lookup from season ranking
+      const seasonWinsById = new Map(
+        (seasonData?.ranking ?? []).map((p) => [p.player_id, p.season_wins])
+      );
+
+      const frozenGlobal = frozenBaselineRef.current;
       const newRanked: RankedPlayer[] = sorted.map((p, i) => ({
         ...p,
-        rankDelta: isFirstLoad || frozen[p.id] === undefined
+        rankDelta: isFirstLoad || frozenGlobal[p.id] === undefined
           ? 0
-          : frozen[p.id] - (i + 1),
+          : frozenGlobal[p.id] - (i + 1),
         streak: streakData?.player_id === p.id ? streakData.streak : undefined,
+        season_wins: seasonWinsById.get(p.id) ?? 0,
       }));
 
-      // Update live refs to post-GP values (after frozen snapshots are captured).
       liveRanksRef.current = Object.fromEntries(sorted.map((p, i) => [p.id, i + 1]));
       liveRatingsRef.current = Object.fromEntries(data.map((p) => [p.id, p.rating]));
+
+      // Build season ranking with rank deltas
+      const frozenSeason = frozenSeasonBaselineRef.current;
+      const newSeasonRanked: RankedSeasonPlayer[] = (seasonData?.ranking ?? []).map((p, i) => ({
+        ...p,
+        rankDelta: isFirstLoad || frozenSeason[p.player_id] === undefined
+          ? 0
+          : frozenSeason[p.player_id] - (i + 1),
+        streak: streakData?.player_id === p.player_id ? streakData.streak : undefined,
+      }));
+
+      liveSeasonRanksRef.current = Object.fromEntries(
+        (seasonData?.ranking ?? []).map((p, i) => [p.player_id, i + 1])
+      );
+
+      if (seasonData?.season_info) setSeasonInfo(seasonData.season_info);
+      if (streakData?.best_ever) setBestStreak(streakData.best_ever);
 
       if (isNewGP) {
         if (gpCommitted) {
@@ -101,7 +132,6 @@ export function useLeaderboard() {
             });
           }
 
-          // Build recap: frozenRatingsRef has pre-GP, data has post-GP.
           const recapEntries: RecapEntry[] = latestMatch!.results.map((r) => ({
             player_id: r.player_id,
             position: r.position,
@@ -115,12 +145,12 @@ export function useLeaderboard() {
 
           lastMatchIdRef.current = latestId;
         }
-        // else: race_results not yet committed — don't advance ref so we retry next fetch
       } else {
         lastMatchIdRef.current = latestId;
       }
 
       setPlayers(newRanked);
+      setSeasonPlayers(newSeasonRanked);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load leaderboard");
@@ -134,8 +164,6 @@ export function useLeaderboard() {
   useEffect(() => {
     const trigger = () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      // 800 ms debounce lets the DB trigger finish updating all player ratings
-      // before we fetch, so we never compare against a partially-updated state.
       debounceRef.current = setTimeout(doFetch, 800);
     };
 
@@ -166,6 +194,11 @@ export function useLeaderboard() {
 
   return {
     players,
+    seasonPlayers,
+    seasonInfo,
+    bestStreak,
+    view,
+    setView,
     loading,
     error,
     celebrationWinner,

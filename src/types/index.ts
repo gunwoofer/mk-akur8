@@ -52,3 +52,28 @@ export interface HistoryEntry {
 export interface SubmitMatchPayload {
   results: { player_id: string; position: number }[];
 }
+
+export interface SeasonInfo {
+  season_number: number;
+  year_month: string;
+  month_name: string;
+  days_left: number;
+  days_total: number;
+  has_games: boolean;
+}
+
+export interface SeasonPlayer {
+  player_id: string;
+  name: string;
+  character_avatar: string;
+  avatar_url?: string | null;
+  season_rating: number;
+  season_gp: number;
+  season_wins: number;
+}
+
+export interface BestStreak {
+  player_id: string;
+  player_name: string;
+  streak: number;
+}

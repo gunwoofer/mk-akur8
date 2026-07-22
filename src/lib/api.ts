@@ -1,4 +1,4 @@
-import type { Player, PlayerStats, HistoryEntry } from "@/types";
+import type { Player, PlayerStats, HistoryEntry, SeasonInfo, SeasonPlayer, BestStreak } from "@/types";
 
 export type SubmitResult = { player_id: string; position: number };
 
@@ -51,7 +51,11 @@ export const api = {
   },
   streak: {
     get: () =>
-      apiFetch<{ player_id: string; streak: number } | null>("/api/streak"),
+      apiFetch<{ player_id: string | null; streak: number; best_ever: BestStreak | null } | null>("/api/streak"),
+  },
+  seasons: {
+    current: () =>
+      apiFetch<{ season_info: SeasonInfo; ranking: SeasonPlayer[] }>("/api/seasons/current"),
   },
   seed: {
     run: () =>

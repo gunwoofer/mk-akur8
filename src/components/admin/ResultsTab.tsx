@@ -5,6 +5,12 @@ import { api } from "@/lib/api";
 import type { Player, HistoryEntry } from "@/types";
 import AvatarDisplay from "@/components/AvatarDisplay";
 
+function TrophyBadge({ wins }: { wins: number }) {
+  if (wins === 0) return null;
+  if (wins <= 5) return <span className="text-yellow-400 text-xs leading-none">{"🏆".repeat(wins)}</span>;
+  return <span className="text-yellow-400 text-xs font-bold leading-none">🏆×{wins}</span>;
+}
+
 type SubView = "ranking" | "history";
 
 const PAGE_SIZE = 5;
@@ -12,6 +18,7 @@ const PAGE_SIZE = 5;
 export default function ResultsTab() {
   const [view, setView] = useState<SubView>("ranking");
   const [players, setPlayers] = useState<Player[]>([]);
+  const [seasonWins, setSeasonWins] = useState<Map<string, number>>(new Map());
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyOffset, setHistoryOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -26,11 +33,13 @@ export default function ResultsTab() {
       setLoading(true);
       setError(null);
       try {
-        const [p, h] = await Promise.all([
+        const [p, h, seasonData] = await Promise.all([
           api.players.list(),
           api.history.list({ limit: PAGE_SIZE, offset: 0 }),
+          api.seasons.current(),
         ]);
         setPlayers(p);
+        setSeasonWins(new Map(seasonData.ranking.map((r) => [r.player_id, r.season_wins])));
         setHistory(h);
         setHistoryOffset(h.length);
         setHasMore(h.length === PAGE_SIZE);
@@ -127,7 +136,10 @@ export default function ResultsTab() {
                   <p className="text-white font-semibold text-sm">{p.name}</p>
                   <p className="text-gray-500 text-xs">{p.gp_played} GPs</p>
                 </div>
-                <p className="text-[#00d4ff] font-bold tabular-nums">{p.rating.toFixed(2)}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-[#00d4ff] font-bold tabular-nums">{p.rating.toFixed(2)}</p>
+                  <TrophyBadge wins={seasonWins.get(p.id) ?? 0} />
+                </div>
               </div>
             ))}
           </div>
