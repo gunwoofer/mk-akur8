@@ -16,10 +16,11 @@ function posColor(pos: number) {
 interface Props {
   stats: PlayerStats | null;
   playerName: string;
+  seasonWins: number;
   onClose: () => void;
 }
 
-export default function PlayerModal({ stats, playerName, onClose }: Props) {
+export default function PlayerModal({ stats, playerName, seasonWins, onClose }: Props) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const resetTimeout = () => {
@@ -68,7 +69,7 @@ export default function PlayerModal({ stats, playerName, onClose }: Props) {
             </h2>
             {player && (
               <p className="text-[#00d4ff] text-sm font-semibold">
-                Rating: {player.rating.toFixed(4)} · {player.gp_played} GPs played
+                Rating: {player.rating.toFixed(4)} · {player.gp_played} GPs played{seasonWins > 0 ? ` · 🏆 ${seasonWins} season${seasonWins !== 1 ? "s" : ""} won` : ""}
               </p>
             )}
           </div>

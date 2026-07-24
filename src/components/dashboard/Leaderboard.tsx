@@ -235,6 +235,7 @@ export default function Leaderboard() {
               players.find((p) => p.id === selectedId)?.name ??
               seasonPlayers.find((p) => p.player_id === selectedId)?.name ?? ""
             }
+            seasonWins={players.find((p) => p.id === selectedId)?.season_wins ?? 0}
             onClose={() => setSelectedId(null)}
           />
         )}
