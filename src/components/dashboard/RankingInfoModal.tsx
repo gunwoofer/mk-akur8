@@ -124,6 +124,31 @@ export default function RankingInfoModal({ onClose }: { onClose: () => void }) {
             </p>
           </section>
 
+          {/* Seasons */}
+          <section>
+            <p className="text-[#00d4ff] text-xs font-semibold uppercase tracking-widest mb-3">
+              Seasons
+            </p>
+            <p className="text-gray-400 text-sm mb-4">
+              Each calendar month is a <span className="text-white font-medium">Season</span>. The exact same Bayesian formula applies — but only to GPs played within that month. Resetting every month gives everyone a fresh shot regardless of their all-time standing.
+            </p>
+            <div className="space-y-2">
+              {[
+                { icon: "🏆", label: "Season winner", desc: "The player with the highest season rating at month end. Ties broken by number of P1 finishes, then global rating." },
+                { icon: "Season / Global", label: "Toggle", desc: "Switch the leaderboard between the current season ranking and the all-time global ranking." },
+                { icon: "Seasons won", label: "Column", desc: "Total number of monthly seasons each player has won. Shown on every row — it survives a poor current season." },
+              ].map(({ icon, label, desc }) => (
+                <div key={label} className="flex gap-3 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-4 py-3">
+                  <span className="text-white font-mono text-xs w-28 shrink-0 pt-0.5">{icon}</span>
+                  <div>
+                    <p className="text-white text-xs font-semibold">{label}</p>
+                    <p className="text-gray-500 text-xs mt-0.5 leading-relaxed">{desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
         </div>
       </motion.div>
     </motion.div>
