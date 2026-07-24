@@ -117,13 +117,13 @@ export default function Leaderboard() {
 
       {/* Column headers */}
       <div className="grid grid-cols-[3rem_3rem_1fr_6rem_5rem_5rem_5rem] gap-4 px-4 mb-2 shrink-0">
-        <span className="text-[#374151] text-xs uppercase tracking-wider">#</span>
+        <span className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">#</span>
         <span />
-        <span className="text-[#374151] text-xs uppercase tracking-wider">Player</span>
-        <span className="text-[#374151] text-xs uppercase tracking-wider text-right">Rating</span>
-        <span className="text-[#374151] text-xs uppercase tracking-wider text-right">GPs</span>
-        <span className="text-[#374151] text-xs uppercase tracking-wider text-right">Trend</span>
-        <span className="text-[#374151] text-xs uppercase tracking-wider text-right">🏆</span>
+        <span className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">Player</span>
+        <span className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider text-right">Rating</span>
+        <span className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider text-right">GPs</span>
+        <span className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider text-right">Trend</span>
+        <span className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider text-right">Seasons won</span>
       </div>
 
       {/* Player list */}
