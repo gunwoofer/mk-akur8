@@ -77,3 +77,24 @@ export interface BestStreak {
   player_name: string;
   streak: number;
 }
+
+export interface SeasonSummary {
+  season_number: number;
+  year_month: string;
+  month_name: string;
+  gp_count: number;
+  is_current: boolean;
+  winner: {
+    player_id: string;
+    name: string;
+    character_avatar: string;
+    avatar_url: string | null;
+  } | null;
+  top3: Array<{
+    player_id: string;
+    name: string;
+    character_avatar: string;
+    avatar_url: string | null;
+    season_rating: number;
+  }>;
+}

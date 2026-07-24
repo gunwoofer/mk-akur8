@@ -11,6 +11,7 @@ import RankingInfoModal from "./RankingInfoModal";
 import CelebrationOverlay from "./CelebrationOverlay";
 import GPRecapOverlay from "./GPRecapOverlay";
 import SeasonProgressBar from "./SeasonProgressBar";
+import SeasonHistoryModal from "./SeasonHistoryModal";
 
 function medalColor(rank: number) {
   if (rank === 1) return "text-yellow-400";
@@ -36,6 +37,7 @@ export default function Leaderboard() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showInfo, setShowInfo] = useState(false);
+  const [showSeasonHistory, setShowSeasonHistory] = useState(false);
   const [statsCache, setStatsCache] = useState<Record<string, PlayerStats>>({});
 
   async function openPlayer(id: string) {
@@ -78,6 +80,13 @@ export default function Leaderboard() {
             <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse mr-2" />
             <span className="text-[#9ca3af] text-sm font-medium tracking-wider uppercase">Live</span>
           </div>
+          <button
+            onClick={() => setShowSeasonHistory(true)}
+            className="px-3 py-1.5 rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] text-[#9ca3af] text-xs font-semibold uppercase tracking-wider mr-2"
+            style={{ WebkitTapHighlightColor: "transparent" }}
+          >
+            Past Seasons
+          </button>
           <button
             onClick={() => setShowInfo(true)}
             className="px-3 py-1.5 rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] text-[#9ca3af] text-xs font-semibold uppercase tracking-wider"
@@ -233,6 +242,10 @@ export default function Leaderboard() {
 
       <AnimatePresence>
         {showInfo && <RankingInfoModal onClose={() => setShowInfo(false)} />}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showSeasonHistory && <SeasonHistoryModal onClose={() => setShowSeasonHistory(false)} />}
       </AnimatePresence>
 
       <AnimatePresence>
