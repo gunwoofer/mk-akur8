@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase-server";
 import {
-  toYearMonth, fullMonthName, computeRatings, computeWinner, BAYESIAN_PRIOR,
+  toYearMonth, fullMonthName, computeRatings, computeWinner, SEASON_PRIOR,
   type MatchRow, type ResultRow, type PlayerRow,
 } from "@/lib/season";
 import type { SeasonSummary } from "@/types";
@@ -37,7 +37,7 @@ export async function GET() {
     const winnerId = computeWinner(mids, results, players);
 
     const top3 = [...ratings.entries()]
-      .map(([pid, { points, gp }]) => ({ pid, rating: points / (BAYESIAN_PRIOR + gp) }))
+      .map(([pid, { points, gp }]) => ({ pid, rating: points / (SEASON_PRIOR + gp) }))
       .sort((a, b) => b.rating - a.rating)
       .slice(0, 3)
       .flatMap(({ pid, rating }) => {

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase-server";
 import {
   toYearMonth, monthName, daysInMonth, daysLeft,
-  computeRatings, computeSeasonWins, BAYESIAN_PRIOR,
+  computeRatings, computeSeasonWins, SEASON_PRIOR,
   type MatchRow, type ResultRow, type PlayerRow,
 } from "@/lib/season";
 import type { SeasonInfo, SeasonPlayer } from "@/types";
@@ -71,7 +71,7 @@ export async function GET() {
         name: p.name,
         character_avatar: p.character_avatar,
         avatar_url: p.avatar_url ?? null,
-        season_rating: points / (BAYESIAN_PRIOR + gp),
+        season_rating: points / (SEASON_PRIOR + gp),
         season_gp: gp,
         season_wins: seasonWins.get(pid) ?? 0,
       }];

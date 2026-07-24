@@ -20,6 +20,7 @@ export interface PlayerRow {
 }
 
 export const BAYESIAN_PRIOR = 20;
+export const SEASON_PRIOR = 5;
 
 export function toYearMonth(iso: string): string {
   return iso.slice(0, 7);
@@ -84,7 +85,7 @@ export function computeWinner(
   let bestRating = -1;
 
   for (const [pid, { points, gp }] of ratings) {
-    const rating = points / (BAYESIAN_PRIOR + gp);
+    const rating = points / (SEASON_PRIOR + gp);
     if (
       rating > bestRating ||
       (rating === bestRating &&

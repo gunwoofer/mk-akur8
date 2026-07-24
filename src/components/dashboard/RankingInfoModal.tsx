@@ -130,7 +130,7 @@ export default function RankingInfoModal({ onClose }: { onClose: () => void }) {
               Seasons
             </p>
             <p className="text-gray-400 text-sm mb-4">
-              Each calendar month is a <span className="text-white font-medium">Season</span>. The exact same Bayesian formula applies — but only to GPs played within that month. Resetting every month gives everyone a fresh shot regardless of their all-time standing.
+              Each calendar month is a <span className="text-white font-medium">Season</span>. The same Bayesian formula applies — but only to GPs played within that month, and with a smaller prior of <span className="text-white font-medium">5 phantom races</span> instead of 20. Ratings converge faster so a great week matters more. Resetting every month gives everyone a fresh shot regardless of their all-time standing.
             </p>
             <div className="space-y-2">
               {[
