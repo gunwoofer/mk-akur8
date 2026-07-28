@@ -78,6 +78,11 @@ export interface BestStreak {
   streak: number;
 }
 
+export interface StreakResponse {
+  streaks: Record<string, number>;
+  best_ever: BestStreak | null;
+}
+
 export interface SeasonSummary {
   season_number: number;
   year_month: string;

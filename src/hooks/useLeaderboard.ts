@@ -98,7 +98,7 @@ export function useLeaderboard() {
         rankDelta: isFirstLoad || frozenGlobal[p.id] === undefined
           ? 0
           : frozenGlobal[p.id] - (i + 1),
-        streak: streakData?.player_id === p.id ? streakData.streak : undefined,
+        streak: streakData?.streaks[p.id],
         season_wins: seasonWinsById.get(p.id) ?? 0,
       }));
 
@@ -112,7 +112,7 @@ export function useLeaderboard() {
         rankDelta: isFirstLoad || frozenSeason[p.player_id] === undefined
           ? 0
           : frozenSeason[p.player_id] - (i + 1),
-        streak: streakData?.player_id === p.player_id ? streakData.streak : undefined,
+        streak: streakData?.streaks[p.player_id],
       }));
 
       liveSeasonRanksRef.current = Object.fromEntries(

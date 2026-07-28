@@ -38,43 +38,61 @@ export async function GET() {
   for (const id of matchIds) byMatch.set(id, []);
   for (const row of rows) byMatch.get(row.match_id)?.push(row);
 
-  // Current streak — newest-first
-  let streakPlayerId: string | null = null;
-  let streak = 0;
+  // Current streak — newest-first, per-player.
+  // A player's streak only breaks when they participate and don't win solo.
+  // Matches they didn't play in are skipped (streak preserved).
+  const accumStreaks = new Map<string, number>();
+  const finalStreaks = new Map<string, number>();
+
   for (const id of matchIds) {
     const players = byMatch.get(id) ?? [];
-    if (players.length === 0) break;
+    if (players.length === 0) continue;
     const minPos = Math.min(...players.map((p) => p.position));
     const winners = players.filter((p) => p.position === minPos);
-    if (winners.length !== 1) break;
-    const winnerId = winners[0].player_id;
-    if (streak === 0) { streakPlayerId = winnerId; streak = 1; }
-    else if (winnerId === streakPlayerId) streak++;
-    else break;
+    const soloWinnerId = winners.length === 1 ? winners[0].player_id : null;
+
+    for (const { player_id } of players) {
+      if (finalStreaks.has(player_id)) continue;
+      if (player_id === soloWinnerId) {
+        accumStreaks.set(player_id, (accumStreaks.get(player_id) ?? 0) + 1);
+      } else {
+        finalStreaks.set(player_id, accumStreaks.get(player_id) ?? 0);
+        accumStreaks.delete(player_id);
+      }
+    }
+  }
+  for (const [pid, n] of accumStreaks) finalStreaks.set(pid, n);
+
+  const streaks: Record<string, number> = {};
+  for (const [pid, n] of finalStreaks) {
+    if (n >= 1) streaks[pid] = n;
   }
 
-  // Best ever streak — oldest-first
+  // Best ever streak — oldest-first, per-player.
+  // Same skip logic: only resets when the player participated and didn't win solo.
   const matchIdsAsc = [...matchIds].reverse();
+  const curStreaks = new Map<string, number>();
   let bestPlayerId: string | null = null;
   let bestStreak = 0;
-  let curPlayerId: string | null = null;
-  let curStreak = 0;
+
   for (const id of matchIdsAsc) {
     const players = byMatch.get(id) ?? [];
-    if (players.length === 0) { curPlayerId = null; curStreak = 0; continue; }
+    if (players.length === 0) continue;
     const minPos = Math.min(...players.map((p) => p.position));
     const winners = players.filter((p) => p.position === minPos);
-    if (winners.length !== 1) { curPlayerId = null; curStreak = 0; continue; }
-    const winnerId = winners[0].player_id;
-    if (winnerId === curPlayerId) {
-      curStreak++;
-    } else {
-      curPlayerId = winnerId;
-      curStreak = 1;
-    }
-    if (curStreak > bestStreak) {
-      bestStreak = curStreak;
-      bestPlayerId = curPlayerId;
+    const soloWinnerId = winners.length === 1 ? winners[0].player_id : null;
+
+    for (const { player_id } of players) {
+      if (player_id === soloWinnerId) {
+        const n = (curStreaks.get(player_id) ?? 0) + 1;
+        curStreaks.set(player_id, n);
+        if (n > bestStreak) {
+          bestStreak = n;
+          bestPlayerId = player_id;
+        }
+      } else {
+        curStreaks.set(player_id, 0);
+      }
     }
   }
 
@@ -82,9 +100,5 @@ export async function GET() {
     ? { player_id: bestPlayerId, player_name: playerNameMap.get(bestPlayerId) ?? "Unknown", streak: bestStreak }
     : null;
 
-  return NextResponse.json(
-    streakPlayerId
-      ? { player_id: streakPlayerId, streak, best_ever }
-      : { player_id: null, streak: 0, best_ever }
-  );
+  return NextResponse.json({ streaks, best_ever });
 }
