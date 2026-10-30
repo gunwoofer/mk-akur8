@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { api } from "@/lib/api";
 import type { PlayerStats } from "@/types";
 import { RankingBoard, type BoardEntry } from "./RankingBoard";
@@ -26,6 +27,7 @@ export default function Leaderboard() {
   const [showInfo, setShowInfo] = useState(false);
   const [showSeasonHistory, setShowSeasonHistory] = useState(false);
   const [statsCache, setStatsCache] = useState<Record<string, PlayerStats>>({});
+  const mobile = useIsMobile();
 
   async function openPlayer(id: string) {
     setSelectedId(id);
@@ -55,8 +57,44 @@ export default function Leaderboard() {
   const headerButton = "px-3 py-1.5 rounded-lg border border-white/15 bg-black/50 text-[#e5e7eb] text-xs font-semibold uppercase tracking-wider";
 
   return (
-    <div className="flex flex-col h-screen w-full px-16 py-5 overflow-hidden">
+    <div className={mobile ? "flex flex-col min-h-screen w-full px-4 py-4" : "flex flex-col h-screen w-full px-16 py-5 overflow-hidden"}>
       {/* Header */}
+      {mobile ? (
+        <div className="mb-3 shrink-0">
+          <h1 className="font-racing mk-title text-4xl leading-none pr-2">MK AKUR8</h1>
+          <p className="text-[#e5e7eb] text-xs tracking-widest uppercase mt-1 text-outline">
+            Office Grand Prix · Live Rankings
+          </p>
+          <div className="flex items-center justify-between mt-3">
+            <div className="flex items-center">
+              <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse mr-1.5" />
+              <span className="text-[#e5e7eb] text-xs font-medium tracking-wider uppercase">Live</span>
+            </div>
+            {bestStreak && (
+              <p className="font-racing text-outline text-orange-400 text-sm leading-tight">
+                <span className="text-[#cbd5e1] text-[10px] not-italic uppercase tracking-wider mr-1">Best streak</span>
+                🔥{bestStreak.streak} <span className="text-white">{bestStreak.player_name.toUpperCase()}</span>
+              </p>
+            )}
+          </div>
+          <div className="flex mt-3">
+            <button
+              onClick={() => setShowSeasonHistory(true)}
+              className={`${headerButton} flex-1 mr-2`}
+              style={{ WebkitTapHighlightColor: "transparent" }}
+            >
+              Past Seasons
+            </button>
+            <button
+              onClick={() => setShowInfo(true)}
+              className={`${headerButton} flex-1`}
+              style={{ WebkitTapHighlightColor: "transparent" }}
+            >
+              Ranking System
+            </button>
+          </div>
+        </div>
+      ) : (
       <div className="flex items-center justify-between mb-3 shrink-0">
         <div>
           <h1 className="font-racing mk-title text-6xl leading-none pr-2">MK AKUR8</h1>
@@ -93,6 +131,7 @@ export default function Leaderboard() {
           </button>
         </div>
       </div>
+      )}
 
       <div className="checkered h-3 w-full rounded-sm mb-4 shrink-0 opacity-90" />
 
@@ -100,7 +139,7 @@ export default function Leaderboard() {
       <SeasonProgressBar info={seasonInfo} />
 
       {/* Season / Global toggle */}
-      <div className="flex items-center mb-1 shrink-0">
+      <div className={`flex mb-1 shrink-0 ${mobile ? "flex-col items-start" : "items-center"}`}>
         <div className="flex bg-black/60 border border-white/10 rounded-xl p-1">
           {(["season", "global"] as const).map((v) => (
             <button
@@ -115,7 +154,7 @@ export default function Leaderboard() {
           ))}
         </div>
         {isSeason && seasonInfo && !seasonInfo.has_games && (
-          <p className="ml-4 text-[#cbd5e1] text-xs text-outline">No GPs played this month yet — showing global ranking</p>
+          <p className={`text-[#cbd5e1] text-xs text-outline ${mobile ? "mt-2" : "ml-4"}`}>No GPs played this month yet — showing global ranking</p>
         )}
       </div>
 
@@ -138,7 +177,7 @@ export default function Leaderboard() {
           </div>
         </div>
       ) : (
-        <RankingBoard entries={entries} onOpen={openPlayer} />
+        <RankingBoard entries={entries} onOpen={openPlayer} mobile={mobile} />
       )}
 
       <AnimatePresence>

@@ -19,9 +19,9 @@ const MK_RED = "#e60012";
 const MK_YELLOW = "#ffd400";
 
 const PLACE = {
-  1: { label: "1ST", ring: "#ffd400", step: "linear-gradient(180deg, #fff3a0 0%, #ffd400 35%, #d98a00 100%)", height: 56, avatar: 80 },
-  2: { label: "2ND", ring: "#d9dde3", step: "linear-gradient(180deg, #ffffff 0%, #cfd4da 35%, #8d949e 100%)", height: 40, avatar: 60 },
-  3: { label: "3RD", ring: "#e8893c", step: "linear-gradient(180deg, #ffd2a6 0%, #e8893c 35%, #9a4a12 100%)", height: 28, avatar: 60 },
+  1: { label: "1ST", ring: "#ffd400", step: "linear-gradient(180deg, #fff3a0 0%, #ffd400 35%, #d98a00 100%)", height: 56, avatar: 80, mHeight: 40, mAvatar: 56 },
+  2: { label: "2ND", ring: "#d9dde3", step: "linear-gradient(180deg, #ffffff 0%, #cfd4da 35%, #8d949e 100%)", height: 40, avatar: 60, mHeight: 30, mAvatar: 44 },
+  3: { label: "3RD", ring: "#e8893c", step: "linear-gradient(180deg, #ffd2a6 0%, #e8893c 35%, #9a4a12 100%)", height: 28, avatar: 60, mHeight: 22, mAvatar: 44 },
 } as const;
 
 function ordinal(n: number) {
@@ -30,10 +30,12 @@ function ordinal(n: number) {
 }
 
 export const ROW_GRID = "grid grid-cols-[5rem_3rem_1fr_7rem_4rem_4rem_6rem] gap-4 items-center";
+// Phones: position, avatar, player, rating — GPs/trend/seasons fold into the other cells.
+const MOBILE_ROW_GRID = "grid grid-cols-[2.75rem_2rem_1fr_auto] gap-3 items-center";
 
-export function TrophyBadge({ wins }: { wins: number }) {
+export function TrophyBadge({ wins, compact = false }: { wins: number; compact?: boolean }) {
   if (wins === 0) return null;
-  if (wins <= 5) return <span className="text-sm leading-none shrink-0">{"🏆".repeat(wins)}</span>;
+  if (wins <= 5 && !compact) return <span className="text-sm leading-none shrink-0">{"🏆".repeat(wins)}</span>;
   return <span className="text-yellow-400 text-sm font-bold leading-none shrink-0">🏆×{wins}</span>;
 }
 
@@ -43,8 +45,9 @@ function Trend({ delta }: { delta: number }) {
   return null;
 }
 
-function PodiumSpot({ entry, place, onOpen }: { entry: BoardEntry; place: 1 | 2 | 3; onOpen: (id: string) => void }) {
+function PodiumSpot({ entry, place, onOpen, mobile }: { entry: BoardEntry; place: 1 | 2 | 3; onOpen: (id: string) => void; mobile: boolean }) {
   const p = PLACE[place];
+  const avatar = mobile ? p.mAvatar : p.avatar;
   return (
     <motion.div
       layout
@@ -52,46 +55,46 @@ function PodiumSpot({ entry, place, onOpen }: { entry: BoardEntry; place: 1 | 2 
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut", delay: place === 1 ? 0.15 : 0 }}
       onClick={() => onOpen(entry.id)}
-      className="w-56 mx-3 flex flex-col items-center cursor-pointer"
+      className={`${mobile ? "flex-1 min-w-0 mx-1" : "w-56 mx-3"} flex flex-col items-center cursor-pointer`}
     >
       <div className="relative mb-2">
         {place === 1 && (
-          <span className="absolute text-3xl leading-none" style={{ left: "50%", top: -28, transform: "translateX(-50%)" }}>👑</span>
+          <span className={`absolute leading-none ${mobile ? "text-2xl" : "text-3xl"}`} style={{ left: "50%", top: mobile ? -22 : -28, transform: "translateX(-50%)" }}>👑</span>
         )}
         <div
           className="rounded-full overflow-hidden flex items-center justify-center bg-black/60"
-          style={{ width: p.avatar, height: p.avatar, border: `4px solid ${p.ring}`, boxShadow: `0 0 18px ${p.ring}66` }}
+          style={{ width: avatar, height: avatar, border: `${mobile ? 3 : 4}px solid ${p.ring}`, boxShadow: `0 0 18px ${p.ring}66` }}
         >
           <AvatarDisplay
             avatarUrl={entry.avatar_url}
             characterAvatar={entry.character_avatar}
             imgClassName="w-full h-full"
-            emojiClassName={place === 1 ? "text-5xl" : "text-4xl"}
+            emojiClassName={mobile ? (place === 1 ? "text-3xl" : "text-2xl") : place === 1 ? "text-5xl" : "text-4xl"}
           />
         </div>
       </div>
       <div className="flex items-center max-w-full">
-        <p className={`font-racing text-outline text-white uppercase truncate ${place === 1 ? "text-2xl" : "text-xl"}`}>
+        <p className={`font-racing text-outline text-white uppercase truncate ${mobile ? (place === 1 ? "text-base" : "text-sm") : place === 1 ? "text-2xl" : "text-xl"}`}>
           {entry.name}
         </p>
         {entry.streak !== undefined && (
-          <span className="ml-2 shrink-0 text-orange-400 font-bold text-base leading-none">🔥{entry.streak}</span>
+          <span className={`shrink-0 text-orange-400 font-bold leading-none ${mobile ? "ml-1 text-xs" : "ml-2 text-base"}`}>🔥{entry.streak}</span>
         )}
       </div>
       <div className="flex items-center mb-2">
-        <p className={`font-racing text-outline tabular-nums ${place === 1 ? "text-3xl" : "text-2xl"}`} style={{ color: MK_YELLOW }}>
+        <p className={`font-racing text-outline tabular-nums ${mobile ? (place === 1 ? "text-xl" : "text-lg") : place === 1 ? "text-3xl" : "text-2xl"}`} style={{ color: MK_YELLOW }}>
           {entry.rating.toFixed(2)}
         </p>
-        <span className="ml-2"><Trend delta={entry.rankDelta} /></span>
-        {entry.wins > 0 && <span className="ml-2"><TrophyBadge wins={entry.wins} /></span>}
+        <span className={mobile ? "ml-1" : "ml-2"}><Trend delta={entry.rankDelta} /></span>
+        {entry.wins > 0 && <span className={mobile ? "ml-1" : "ml-2"}><TrophyBadge wins={entry.wins} compact={mobile} /></span>}
       </div>
       <div
         className="w-full rounded-t-lg flex items-center justify-center border-t-2 border-white/60"
-        style={{ height: p.height, background: p.step, boxShadow: "0 6px 18px rgba(0,0,0,0.5)" }}
+        style={{ height: mobile ? p.mHeight : p.height, background: p.step, boxShadow: "0 6px 18px rgba(0,0,0,0.5)" }}
       >
         <span
           className="font-racing leading-none"
-          style={{ color: "#1a1206", fontSize: place === 1 ? 30 : 24, textShadow: "0 1px 0 rgba(255,255,255,0.6)" }}
+          style={{ color: "#1a1206", fontSize: mobile ? (place === 1 ? 20 : 16) : place === 1 ? 30 : 24, textShadow: "0 1px 0 rgba(255,255,255,0.6)" }}
         >
           {p.label}
         </span>
@@ -100,20 +103,30 @@ function PodiumSpot({ entry, place, onOpen }: { entry: BoardEntry; place: 1 | 2 
   );
 }
 
-export function Podium({ entries, onOpen }: { entries: BoardEntry[]; onOpen: (id: string) => void }) {
+export function Podium({ entries, onOpen, mobile }: { entries: BoardEntry[]; onOpen: (id: string) => void; mobile: boolean }) {
   const [first, second, third] = entries;
   if (!first) return null;
   return (
-    <div className="flex items-end justify-center mb-5 shrink-0 pt-7">
-      {second && <PodiumSpot key={second.id} entry={second} place={2} onOpen={onOpen} />}
-      <PodiumSpot key={first.id} entry={first} place={1} onOpen={onOpen} />
-      {third && <PodiumSpot key={third.id} entry={third} place={3} onOpen={onOpen} />}
+    <div className={`flex items-end justify-center shrink-0 ${mobile ? "mb-4 pt-6" : "mb-5 pt-7"}`}>
+      {second && <PodiumSpot key={second.id} entry={second} place={2} onOpen={onOpen} mobile={mobile} />}
+      <PodiumSpot key={first.id} entry={first} place={1} onOpen={onOpen} mobile={mobile} />
+      {third && <PodiumSpot key={third.id} entry={third} place={3} onOpen={onOpen} mobile={mobile} />}
     </div>
   );
 }
 
-export function ColumnHeaders() {
+export function ColumnHeaders({ mobile }: { mobile: boolean }) {
   const label = "text-[#cbd5e1] text-xs font-semibold uppercase tracking-wider";
+  if (mobile) {
+    return (
+      <div className={`${MOBILE_ROW_GRID} px-4 mb-2 shrink-0`}>
+        <span className={label}>Pos</span>
+        <span />
+        <span className={label}>Player</span>
+        <span className={`${label} text-right`}>Rating</span>
+      </div>
+    );
+  }
   return (
     <div className={`${ROW_GRID} px-6 mb-2 shrink-0`}>
       <span className={label}>Pos</span>
@@ -124,6 +137,47 @@ export function ColumnHeaders() {
       <span className={`${label} text-right`}>Trend</span>
       <span className={`${label} text-right`}>Seasons won</span>
     </div>
+  );
+}
+
+function MobileBoardRow({ entry, rank, onOpen }: { entry: BoardEntry; rank: number; onOpen: (id: string) => void }) {
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      onClick={() => onOpen(entry.id)}
+      className={`hud-row ${MOBILE_ROW_GRID} px-4 py-2 mb-2 cursor-pointer`}
+      style={{ ["--hud-accent" as string]: MK_RED }}
+    >
+      <span className="font-racing text-outline text-white leading-none">
+        <span className="text-2xl tabular-nums">{rank}</span>
+        <span className="text-xs ml-0.5 align-top">{ordinal(rank)}</span>
+      </span>
+      <AvatarDisplay avatarUrl={entry.avatar_url} characterAvatar={entry.character_avatar} imgClassName="w-8 h-8" emojiClassName="text-2xl" />
+      <div className="min-w-0">
+        <div className="flex items-center min-w-0">
+          <p className="font-racing text-outline text-white text-base uppercase truncate leading-tight mr-1">
+            {entry.name}
+          </p>
+          {entry.streak !== undefined && (
+            <span className="shrink-0 text-orange-400 font-bold text-sm leading-none">🔥{entry.streak}</span>
+          )}
+        </div>
+        <div className="flex items-center text-[#cbd5e1] text-xs leading-tight">
+          <span className="tabular-nums">{entry.gp} GPs</span>
+          {entry.wins > 0 && <span className="ml-2"><TrophyBadge wins={entry.wins} compact /></span>}
+        </div>
+      </div>
+      <div className="flex items-center justify-end">
+        <p className="font-racing text-outline text-xl tabular-nums" style={{ color: MK_YELLOW }}>
+          {entry.rating.toFixed(2)}
+        </p>
+        <span className="ml-1 w-4 text-sm text-center"><Trend delta={entry.rankDelta} /></span>
+      </div>
+    </motion.div>
   );
 }
 
@@ -162,15 +216,16 @@ function BoardRow({ entry, rank, onOpen }: { entry: BoardEntry; rank: number; on
   );
 }
 
-export function RankingBoard({ entries, onOpen }: { entries: BoardEntry[]; onOpen: (id: string) => void }) {
+export function RankingBoard({ entries, onOpen, mobile }: { entries: BoardEntry[]; onOpen: (id: string) => void; mobile: boolean }) {
+  const Row = mobile ? MobileBoardRow : BoardRow;
   return (
     <>
-      <Podium entries={entries.slice(0, 3)} onOpen={onOpen} />
-      {entries.length > 3 && <ColumnHeaders />}
-      <div className="flex-1 overflow-y-auto scrollbar-hide pl-3">
+      <Podium entries={entries.slice(0, 3)} onOpen={onOpen} mobile={mobile} />
+      {entries.length > 3 && <ColumnHeaders mobile={mobile} />}
+      <div className={mobile ? "pl-2" : "flex-1 overflow-y-auto scrollbar-hide pl-3"}>
         <AnimatePresence mode="popLayout">
           {entries.slice(3).map((entry, i) => (
-            <BoardRow key={entry.id} entry={entry} rank={i + 4} onOpen={onOpen} />
+            <Row key={entry.id} entry={entry} rank={i + 4} onOpen={onOpen} />
           ))}
         </AnimatePresence>
       </div>
