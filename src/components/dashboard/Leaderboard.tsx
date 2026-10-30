@@ -29,15 +29,15 @@ export default function Leaderboard() {
   const [statsCache, setStatsCache] = useState<Record<string, PlayerStats>>({});
   const mobile = useIsMobile();
 
+  // Always refetch: the TV runs all day, so a cached copy goes stale after new GPs.
+  // The cached copy (if any) shows instantly while the fresh one loads.
   async function openPlayer(id: string) {
     setSelectedId(id);
-    if (!statsCache[id]) {
-      try {
-        const data = await api.players.stats(id);
-        setStatsCache((prev) => ({ ...prev, [id]: data }));
-      } catch {
-        // stats fail silently
-      }
+    try {
+      const data = await api.players.stats(id);
+      setStatsCache((prev) => ({ ...prev, [id]: data }));
+    } catch {
+      // stats fail silently
     }
   }
 
@@ -189,7 +189,8 @@ export default function Leaderboard() {
               players.find((p) => p.id === selectedId)?.name ??
               seasonPlayers.find((p) => p.player_id === selectedId)?.name ?? ""
             }
-            seasonWins={players.find((p) => p.id === selectedId)?.season_wins ?? 0}
+            streak={players.find((p) => p.id === selectedId)?.streak}
+            initialView={showSeason ? "season" : "global"}
             onClose={() => setSelectedId(null)}
           />
         )}

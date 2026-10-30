@@ -25,16 +25,45 @@ export interface RaceResult {
 
 export interface RecentResult {
   match_id: string;
-  played_at: string | null;
+  played_at: string;
   position: number;
+}
+
+export interface StatBlock {
+  rating: number;
+  rating_delta: number | null;   // change caused by the player's last GP in this scope
+  rank: number | null;
+  ranked_players: number;
+  gp: number;
+  wins: number;
+  podiums: number;
+  avg_finish: number | null;
+  best_finish: number | null;
+  recent: RecentResult[];         // newest first, max 10
+}
+
+export interface SeasonPoint {
+  played_at: string;
+  rating: number;
+  position: number;
+}
+
+export interface SeasonRecord {
+  year_month: string;
+  month_name: string;
+  rating: number;
+  gp: number;
+  rank: number;
+  won: boolean;
+  is_current: boolean;
 }
 
 export interface PlayerStats {
   player: Player;
-  podiums: number;
-  worst_finish: number;
-  avg_placement: number;
-  recent_results: RecentResult[];
+  season_wins: number;
+  current_season: { year_month: string; month_name: string; stats: StatBlock; series: SeasonPoint[] };
+  global: StatBlock;
+  seasons: SeasonRecord[];        // oldest first, seasons the player took part in
 }
 
 export interface HistoryResult {
