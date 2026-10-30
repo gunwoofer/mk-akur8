@@ -11,6 +11,7 @@ import PlayerModal from "./PlayerModal";
 import RankingInfoModal from "./RankingInfoModal";
 import CelebrationOverlay from "./CelebrationOverlay";
 import GPRecapOverlay from "./GPRecapOverlay";
+import OvertakeOverlay from "./OvertakeOverlay";
 import SeasonProgressBar from "./SeasonProgressBar";
 import SeasonHistoryModal from "./SeasonHistoryModal";
 
@@ -21,6 +22,7 @@ export default function Leaderboard() {
     loading, error,
     celebrationWinner, dismissCelebration,
     gpRecap, clearRecap,
+    overtakes, clearOvertakes,
   } = useLeaderboard();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -213,6 +215,13 @@ export default function Leaderboard() {
       <AnimatePresence>
         {!celebrationWinner && gpRecap && (
           <GPRecapOverlay entries={gpRecap} onDone={clearRecap} />
+        )}
+      </AnimatePresence>
+
+      {/* Sequence after a GP: celebration → season recap → overtakes */}
+      <AnimatePresence>
+        {!celebrationWinner && !gpRecap && overtakes.length > 0 && (
+          <OvertakeOverlay overtakes={overtakes} onDone={clearOvertakes} />
         )}
       </AnimatePresence>
     </div>

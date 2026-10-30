@@ -51,17 +51,18 @@ export default function GPRecapOverlay({ entries, onDone }: Props) {
         exit={{ scale: 0.95, opacity: 0 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-xl mx-4 px-8 py-8 rounded-3xl border border-[#00d4ff]/20 bg-black/90"
-        style={{ boxShadow: "0 0 60px rgba(0,212,255,0.08)" }}
+        className="relative w-full max-w-xl mx-4 px-6 py-7 rounded-3xl border border-white/10 overflow-hidden"
+        style={{ background: "linear-gradient(180deg, #17171f 0%, #101016 70%)", boxShadow: "0 30px 80px rgba(0,0,0,0.6)" }}
       >
-        <p className="text-[#00d4ff] font-black tracking-[0.3em] uppercase text-sm mb-6 text-center">
-          Grand Prix Results
-        </p>
+        <div className="checkered h-2 absolute left-0 right-0 top-0 opacity-80" />
+        <p className="font-racing mk-title text-3xl text-center leading-none mt-1">Grand Prix Results</p>
+        <p className="text-[#9ca3af] text-xs tracking-[0.25em] uppercase text-center mt-2 mb-6">Season rating change</p>
 
         <div className="space-y-3">
           <AnimatePresence>
             {entries.map((entry, index) => {
-              const delta = entry.ratingAfter - entry.ratingBefore;
+              const isNew = entry.ratingBefore === null;
+              const delta = entry.ratingAfter - (entry.ratingBefore ?? 0);
               const absDelta = Math.abs(delta);
               const deltaColor =
                 delta > 0.005 ? "text-[#4ade80]" : delta < -0.005 ? "text-[#f87171]" : "text-gray-500";
@@ -74,21 +75,21 @@ export default function GPRecapOverlay({ entries, onDone }: Props) {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.6, duration: 0.4, ease: "easeOut" }}
-                  className="flex items-center gap-3"
+                  className="flex items-center"
                 >
-                  <span className="w-10 text-center font-black text-sm text-gray-400 shrink-0">
+                  <span className="w-10 mr-3 text-center font-black text-sm text-gray-400 shrink-0">
                     {positionLabel(entry.position, entries)}
                   </span>
                   <AvatarDisplay
                     avatarUrl={entry.avatar_url}
                     characterAvatar={entry.character_avatar}
-                    imgClassName="w-8 h-8 shrink-0"
-                    emojiClassName="text-2xl leading-none shrink-0"
+                    imgClassName="w-8 h-8 mr-3 shrink-0"
+                    emojiClassName="text-2xl mr-3 leading-none shrink-0"
                   />
-                  <span className="text-white font-bold text-sm w-28 shrink-0 truncate">
+                  <span className="font-racing text-white text-sm uppercase w-28 mr-3 shrink-0 truncate">
                     {entry.name}
                   </span>
-                  <div className="flex-1 h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden">
+                  <div className="flex-1 mr-3 h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${barWidth}%` }}
@@ -97,13 +98,16 @@ export default function GPRecapOverlay({ entries, onDone }: Props) {
                       style={{
                         background:
                           entry.position <= 3
-                            ? "linear-gradient(90deg, #fac800, #ffdd57)"
-                            : "linear-gradient(90deg, #00d4ff, #0099bb)",
+                            ? "linear-gradient(90deg, #ff9500, #ffd400)"
+                            : "linear-gradient(90deg, #e60012, #ff5a36)",
                       }}
                     />
                   </div>
-                  <span className={`${deltaColor} font-black text-sm tabular-nums w-16 text-right shrink-0`}>
-                    {deltaSign}{absDelta.toFixed(2)}
+                  <span className="font-racing text-[#ffd400] text-sm tabular-nums w-12 text-right shrink-0">
+                    {entry.ratingAfter.toFixed(2)}
+                  </span>
+                  <span className={`${isNew ? "text-[#ffd400]" : deltaColor} font-black text-sm tabular-nums w-16 text-right shrink-0`}>
+                    {isNew ? "NEW" : `${deltaSign}${absDelta.toFixed(2)}`}
                   </span>
                 </motion.div>
               );
@@ -111,7 +115,7 @@ export default function GPRecapOverlay({ entries, onDone }: Props) {
           </AnimatePresence>
         </div>
 
-        <p className="text-gray-700 text-xs tracking-widest text-center mt-6">tap anywhere to dismiss</p>
+        <p className="text-[#4b5563] text-xs tracking-widest text-center mt-6">tap anywhere to dismiss</p>
       </motion.div>
     </motion.div>
   );

@@ -33,8 +33,58 @@ export interface RecapEntry {
   name: string;
   character_avatar: string;
   avatar_url?: string | null;
-  ratingBefore: number;
+  // Season rating — what people care about after a GP. null before = first GP of the season.
+  ratingBefore: number | null;
   ratingAfter: number;
+}
+
+export interface OvertakePlayer {
+  name: string;
+  character_avatar: string;
+  avatar_url?: string | null;
+}
+
+export interface Overtake {
+  passer: OvertakePlayer;
+  passed: OvertakePlayer;
+  newRank: number;
+  line: string;
+}
+
+const TRASH_TALK = [
+  "{a} just left {b} in the dust 💨",
+  "Check your mirrors, {b} — {a} is coming through!",
+  "{a} sends a blue shell {b}'s way 🐢💥",
+  "Bye bye {b} 👋 {a} takes P{rank}!",
+  "{b} hit a banana. {a} says thanks 🍌",
+  "Mushroom boost! {a} zooms past {b} 🍄",
+  "{b} was holding the line… until {a} showed up.",
+  "{a} to {b}: see you at the finish line 🏁",
+];
+
+// Pairs where A was ranked behind B before the GP and is ahead of B now (season ranking).
+// Top-of-table overtakes first, at most 3 so the TV doesn't loop for minutes.
+function findOvertakes(
+  before: Record<string, number>,
+  after: { player_id: string; name: string; character_avatar: string; avatar_url?: string | null }[],
+): Overtake[] {
+  const found: Overtake[] = [];
+  after.forEach((a, ia) => {
+    after.forEach((b, ib) => {
+      if (ia >= ib) return;
+      const aBefore = before[a.player_id];
+      const bBefore = before[b.player_id];
+      if (aBefore === undefined || bBefore === undefined || aBefore <= bBefore) return;
+      const template = TRASH_TALK[Math.floor(Math.random() * TRASH_TALK.length)];
+      found.push({
+        passer: { name: a.name, character_avatar: a.character_avatar, avatar_url: a.avatar_url },
+        passed: { name: b.name, character_avatar: b.character_avatar, avatar_url: b.avatar_url },
+        newRank: ia + 1,
+        line: template.replace(/{a}/g, a.name).replace(/{b}/g, b.name).replace(/{rank}/g, String(ia + 1)),
+      });
+    });
+  });
+  return found.sort((x, y) => x.newRank - y.newRank).slice(0, 3);
 }
 
 function sortByRating(players: Player[]): Player[] {
@@ -54,11 +104,12 @@ export function useLeaderboard() {
   const [error, setError] = useState<string | null>(null);
   const [celebrationWinner, setCelebrationWinner] = useState<CelebrationWinner | null>(null);
   const [gpRecap, setGpRecap] = useState<RecapEntry[] | null>(null);
+  const [overtakes, setOvertakes] = useState<Overtake[]>([]);
 
   const liveRanksRef = useRef<Record<string, number>>({});
-  const liveRatingsRef = useRef<Record<string, number>>({});
+  const liveSeasonRatingsRef = useRef<Record<string, number>>({});
   const frozenBaselineRef = useRef<Record<string, number>>({});
-  const frozenRatingsRef = useRef<Record<string, number>>({});
+  const frozenSeasonRatingsRef = useRef<Record<string, number>>({});
 
   // Season rank refs — same pattern as global
   const liveSeasonRanksRef = useRef<Record<string, number>>({});
@@ -90,7 +141,7 @@ export function useLeaderboard() {
 
       if (gpCommitted) {
         frozenBaselineRef.current = { ...liveRanksRef.current };
-        frozenRatingsRef.current = { ...liveRatingsRef.current };
+        frozenSeasonRatingsRef.current = { ...liveSeasonRatingsRef.current };
         frozenSeasonBaselineRef.current = { ...liveSeasonRanksRef.current };
       }
 
@@ -110,7 +161,6 @@ export function useLeaderboard() {
       }));
 
       liveRanksRef.current = Object.fromEntries(sorted.map((p, i) => [p.id, i + 1]));
-      liveRatingsRef.current = Object.fromEntries(data.map((p) => [p.id, p.rating]));
 
       // Build season ranking with rank deltas
       const frozenSeason = frozenSeasonBaselineRef.current;
@@ -124,6 +174,9 @@ export function useLeaderboard() {
 
       liveSeasonRanksRef.current = Object.fromEntries(
         (seasonData?.ranking ?? []).map((p, i) => [p.player_id, i + 1])
+      );
+      liveSeasonRatingsRef.current = Object.fromEntries(
+        (seasonData?.ranking ?? []).filter((p) => p.season_gp > 0).map((p) => [p.player_id, p.season_rating])
       );
 
       if (seasonData?.season_info) setSeasonInfo(seasonData.season_info);
@@ -145,10 +198,11 @@ export function useLeaderboard() {
             name: r.name,
             character_avatar: r.avatar,
             avatar_url: r.avatar_url,
-            ratingBefore: frozenRatingsRef.current[r.player_id] ?? 0,
-            ratingAfter: data.find((p) => p.id === r.player_id)?.rating ?? 0,
+            ratingBefore: frozenSeasonRatingsRef.current[r.player_id] ?? null,
+            ratingAfter: seasonData?.ranking.find((p) => p.player_id === r.player_id)?.season_rating ?? 0,
           }));
           setGpRecap((prev) => prev ?? recapEntries);
+          setOvertakes(findOvertakes(frozenSeasonBaselineRef.current, seasonData?.ranking ?? []));
 
           lastMatchIdRef.current = latestId;
           lastMatchAtRef.current = latestAt;
@@ -214,5 +268,7 @@ export function useLeaderboard() {
     dismissCelebration: () => setCelebrationWinner(null),
     gpRecap,
     clearRecap: () => setGpRecap(null),
+    overtakes,
+    clearOvertakes: () => setOvertakes([]),
   };
 }
