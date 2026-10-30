@@ -3,7 +3,7 @@ export interface PointsRow {
   pts: number;
 }
 
-// Canonical GP points table — single source of truth for both the UI and seed data.
+// Canonical GP points table — single source of truth for the UI.
 // The authoritative scoring lives in the `position_points` DB table; this mirrors it
 // for client-side display (RankingInfoModal) without an extra round-trip.
 export const POINTS_TABLE: PointsRow[] = [

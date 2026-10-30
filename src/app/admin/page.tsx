@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { api } from "@/lib/api";
 import PlayersTab from "@/components/admin/PlayersTab";
 import SubmitTab from "@/components/admin/SubmitTab";
 import ResultsTab from "@/components/admin/ResultsTab";
@@ -17,22 +16,6 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<Tab>("submit");
-  const [seeding, setSeeding] = useState(false);
-  const [seedMsg, setSeedMsg] = useState<string | null>(null);
-
-  async function runSeed() {
-    setSeeding(true);
-    setSeedMsg(null);
-    try {
-      await api.seed.run();
-      setSeedMsg("✓ Seeded");
-    } catch (err) {
-      setSeedMsg(`✗ ${err instanceof Error ? err.message : "Failed"}`);
-    } finally {
-      setSeeding(false);
-      setTimeout(() => setSeedMsg(null), 3000);
-    }
-  }
 
   return (
     <div className="flex flex-col h-screen max-w-md mx-auto overflow-hidden">
@@ -46,25 +29,6 @@ export default function AdminPage() {
             <p className="text-white font-bold text-sm leading-none">MK Akur8</p>
             <p className="text-[#00d4ff] text-[10px] tracking-widest uppercase mt-0.5">Admin</p>
           </div>
-          <AnimatePresence>
-            {seedMsg && (
-              <motion.span
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                className={`text-xs font-medium ${seedMsg.startsWith("✓") ? "text-green-400" : "text-red-400"}`}
-              >
-                {seedMsg}
-              </motion.span>
-            )}
-          </AnimatePresence>
-          <button
-            onClick={runSeed}
-            disabled={seeding}
-            className="text-[11px] text-gray-700 hover:text-gray-400 transition-colors disabled:opacity-40 px-2.5 py-1.5 rounded-lg border border-[#1f1f1f] bg-[#141414]"
-          >
-            {seeding ? "…" : "Seed"}
-          </button>
         </div>
       </header>
 

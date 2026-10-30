@@ -99,7 +99,6 @@ src/
       players/[id]/route.ts     # GET (stats), DELETE
       matches/route.ts          # POST (submit GP)
       history/route.ts          # GET (paginated match history)
-      seed/route.ts             # POST (insert sample data)
 
   components/
     dashboard/
@@ -176,7 +175,6 @@ api.players.delete(id)
 api.players.stats(id)
 api.matches.submit(results)
 api.history.list({ limit?, offset? })  // pagination: limit≤50, offset≥0
-api.seed.run()
 ```
 
 ### Supabase clients
@@ -231,7 +229,8 @@ Disable dragging when slot is empty: `disabled: !player`. Always spread `listene
 ## Running the App
 
 ```bash
-npm run dev      # http://localhost:3000
+npm run dev      # http://localhost:3000 (TEST database)
+npm run dev:prod # http://localhost:3000 (PROD database)
 npm run build    # type-check + production build
 npm run lint     # ESLint
 npx tsc --noEmit # type-check only (fast)
@@ -239,7 +238,7 @@ npx tsc --noEmit # type-check only (fast)
 
 After code changes, always run `npx tsc --noEmit` before declaring done. The project has no test suite.
 
-**Seed data:** Hit the "Seed" button in the admin header (or POST `/api/seed`) to insert 5 sample players and 10 GPs. The seed route refuses to run twice — delete the sample players first.
+**Test vs prod databases:** two Supabase projects. `npm run dev` uses the TEST project (`rqsvrwzgsutllzycyzmp`, creds in `.env.test`, loaded by `scripts/dev-test.mjs`); `npm run dev:prod` uses PROD (`znokolhvhdbwdlijclqp`, `.env.local`). Vercel Preview deploys use TEST, Production uses PROD. MCP servers: `supabase` = prod, `supabase-test` = test. Try schema changes on test first.
 
 ---
 

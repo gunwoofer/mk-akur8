@@ -61,8 +61,4 @@ export const api = {
     get: (yearMonth: string) =>
       apiFetch<{ ranking: SeasonPlayer[] }>(`/api/seasons/${yearMonth}`),
   },
-  seed: {
-    run: () =>
-      apiFetch<{ message: string }>("/api/seed", { method: "POST" }),
-  },
 };
