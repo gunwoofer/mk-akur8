@@ -18,7 +18,7 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<Tab>("submit");
 
   return (
-    <div className="flex flex-col h-screen max-w-md mx-auto overflow-hidden">
+    <div className="flex flex-col h-dvh max-w-md mx-auto overflow-hidden">
       {/* Header */}
       <header className="shrink-0 px-4 pt-4 pb-3 border-b border-[#181818]">
         <div className="flex items-center gap-3">
@@ -50,7 +50,7 @@ export default function AdminPage() {
       </main>
 
       {/* Bottom nav */}
-      <nav className="shrink-0 flex items-stretch gap-1 px-2 pt-1.5 pb-2 border-t border-[#181818]">
+      <nav className="shrink-0 flex items-stretch gap-1 px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] border-t border-[#181818]">
         {TABS.map((tab) => (
           <button
             key={tab.id}

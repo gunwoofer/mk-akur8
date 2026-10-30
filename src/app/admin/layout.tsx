@@ -1,13 +1,19 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
   title: "MK Akur8 — Admin",
   description: "Mobile admin portal for submitting race results.",
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen w-full carbon-bg overflow-x-hidden">
+    <div className="min-h-dvh w-full carbon-bg overflow-x-hidden">
       {/* Portrait orientation lock hint for mobile */}
       <style>{`
         @media (orientation: landscape) and (max-width: 768px) {
