@@ -77,6 +77,27 @@ export default function ResultsTab() {
     }
   }, []);
 
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  async function deleteGp(entry: HistoryEntry) {
+    const names = entry.results.map((r) => r.name).join(", ");
+    if (!confirm(`Delete the GP of ${formatDate(entry.played_at)} (${names})?\n\nScores of every GP played after it will be recomputed.`)) return;
+    setDeletingId(entry.match_id);
+    try {
+      await api.matches.delete(entry.match_id);
+      setHistory((prev) => prev.filter((h) => h.match_id !== entry.match_id));
+      setHistoryOffset((o) => Math.max(0, o - 1));
+      setSeasonsLoaded(false);
+      const [p, seasonData] = await Promise.all([api.players.list(), api.seasons.current()]);
+      setPlayers(p);
+      setSeasonWins(new Map(seasonData.ranking.map((r) => [r.player_id, r.season_wins])));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete GP");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   const historyOffsetRef = useRef(historyOffset);
   useEffect(() => { historyOffsetRef.current = historyOffset; }, [historyOffset]);
 
@@ -201,7 +222,17 @@ export default function ResultsTab() {
                   <div key={h.match_id} className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl overflow-hidden">
                     <div className="px-4 py-2 border-b border-[#2a2a2a] flex items-center justify-between">
                       <p className="text-[#00d4ff] text-xs font-semibold uppercase tracking-widest">Grand Prix</p>
-                      <p className="text-gray-500 text-xs">{formatDate(h.played_at)}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-gray-500 text-xs">{formatDate(h.played_at)}</p>
+                        <button
+                          onClick={() => deleteGp(h)}
+                          disabled={deletingId !== null}
+                          aria-label="Delete GP"
+                          className="w-7 h-7 -mr-2 flex items-center justify-center rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-400/10 transition-colors text-xs disabled:opacity-40"
+                        >
+                          {deletingId === h.match_id ? "…" : "🗑"}
+                        </button>
+                      </div>
                     </div>
                     <div className="divide-y divide-[#2a2a2a]">
                       {h.results.map((r) => {

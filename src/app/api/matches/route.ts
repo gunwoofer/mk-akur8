@@ -22,34 +22,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const supabase = getServerSupabase();
+  // Saves the match, its results and its frozen scores in one transaction.
+  const { data: matchId, error } = await getServerSupabase().rpc("submit_gp", {
+    p_results: results.map(({ player_id, position }) => ({ player_id, position })),
+  });
 
-  const { data: match, error: matchError } = await supabase
-    .from("matches")
-    .insert({})
-    .select("id")
-    .single();
-
-  if (matchError || !match) {
-    return NextResponse.json(
-      { error: matchError?.message ?? "Failed to create match" },
-      { status: 500 }
-    );
+  if (error || !matchId) {
+    return NextResponse.json({ error: error?.message ?? "Failed to submit GP" }, { status: 500 });
   }
 
-  const rows = results.map((r) => ({
-    match_id: match.id,
-    player_id: r.player_id,
-    position: r.position,
-  }));
-
-  const { error: resultsError } = await supabase.from("race_results").insert(rows);
-
-  if (resultsError) {
-    // Don't leave an empty GP behind — it would count as a played match in seasons.
-    await supabase.from("matches").delete().eq("id", match.id);
-    return NextResponse.json({ error: resultsError.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ match_id: match.id }, { status: 201 });
+  return NextResponse.json({ match_id: matchId }, { status: 201 });
 }

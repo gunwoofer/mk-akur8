@@ -154,7 +154,7 @@ export default function RankingInfoModal({ onClose }: { onClose: () => void }) {
           {/* Summary callout */}
           <section className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-5 py-4">
             <p className="text-gray-300 text-sm leading-relaxed">
-              <span className="text-white font-semibold">The key insight:</span> winning one race takes you to {rating(p1, 1)}. Winning twenty takes you to {rating(p1 * 20, 20)}. You cannot shortcut the leaderboard — sustained front-running across many GPs is the only path to the top.
+              <span className="text-white font-semibold">The key insight:</span> winning one race takes you to {rating(p1, 1)}. Winning twenty takes you to {rating(p1 * 20, 20)}. You cannot shortcut the leaderboard — sustained front-running across many GPs is the only path to the top. Scores are locked in when each GP is submitted, so any change to these rules only applies to future GPs.
             </p>
           </section>
 

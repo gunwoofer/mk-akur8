@@ -13,11 +13,18 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { avatar_url } = await req.json() as { avatar_url: string | null };
+  const body = await req.json() as { avatar_url?: string | null; archived?: boolean };
+  const update: { avatar_url?: string | null; archived_at?: string | null } = {};
+  if ("avatar_url" in body) update.avatar_url = body.avatar_url ?? null;
+  if ("archived" in body) update.archived_at = body.archived ? new Date().toISOString() : null;
+  if (Object.keys(update).length === 0) {
+    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
+  }
+
   const supabase = getServerSupabase();
   const { data, error } = await supabase
     .from("players")
-    .update({ avatar_url })
+    .update(update)
     .eq("id", id)
     .select()
     .single();
@@ -25,12 +32,30 @@ export async function PATCH(
   return NextResponse.json(data);
 }
 
+// A player who has raced is archived instead of deleted: deleting would cascade
+// through their results and rewrite every GP and season they played in.
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   const supabase = getServerSupabase();
+
+  const { count, error: countError } = await supabase
+    .from("race_results")
+    .select("id", { count: "exact", head: true })
+    .eq("player_id", id);
+  if (countError) return NextResponse.json({ error: countError.message }, { status: 500 });
+
+  if ((count ?? 0) > 0) {
+    const { error } = await supabase
+      .from("players")
+      .update({ archived_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ archived: id });
+  }
+
   const { error } = await supabase.from("players").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ deleted: id });

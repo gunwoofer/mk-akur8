@@ -16,13 +16,8 @@ export async function GET(
   }
 
   const data = await loadSeasonData(getServerSupabase());
-  const targetMatchIds = data.byMonth.get(year_month) ?? [];
-  if (targetMatchIds.length === 0) {
-    return NextResponse.json({ ranking: [] });
-  }
-
   const seasonWins = computeSeasonWins(data, currentYearMonth());
-  const ranking = seasonStandings(targetMatchIds, data).map((s) => toSeasonPlayer(s, seasonWins));
+  const ranking = seasonStandings(year_month, data).map((s) => toSeasonPlayer(s, seasonWins));
 
   return NextResponse.json({ ranking });
 }

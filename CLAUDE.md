@@ -49,8 +49,9 @@ Managed entirely in Supabase. Tables:
 id              uuid PK
 name            text
 character_avatar text  (single emoji, e.g. "🦊")
-rating          float  (cumulative points, updated by DB trigger)
-gp_played       int    (incremented by DB trigger)
+rating          float  (mirror of the player's latest rating_changes.rating_after)
+gp_played       int    (mirror of the latest rating_changes.gp_count)
+archived_at     timestamptz null  (archived = hidden from live boards/lobby, history kept)
 ```
 
 **`matches`** — one row per grand prix
@@ -76,14 +77,21 @@ Positions 1–12 award 15/12/10/9/8/7/6/5/4/3/2/1 points. Positions 13–24 awar
 
 **`scoring_settings`** — single row (`id = true`), single source for the priors
 ```
-global_prior  int  (20 — phantom games in the global rating, used by the DB trigger)
+global_prior  int  (20 — phantom games in the global rating)
 season_prior  int  ( 5 — phantom games in the season rating, used by src/lib/season.ts)
 ```
-After changing `scoring_settings` or `position_points` in Supabase, run `select recalculate_all_ratings();` — stored ratings are not recomputed automatically.
+Changing `scoring_settings` or `position_points` only affects GPs submitted **afterwards** — see the ledger below.
 
-**DB trigger:** After every `race_results` INSERT, a Postgres trigger calls `recalculate_ratings_for(player_ids)` for all players in that match. Only INSERT fires it — manual UPDATE/DELETE of results leaves ratings stale until `recalculate_all_ratings()` is run.
+**`rating_changes`** — the frozen scoring ledger, one row per player per GP, written once when the GP is scored: position, points, running `total_points`/`gp_count`, `rating_before`/`rating_after`, and the season figures (`season` = YYYY-MM in America/Montreal, `season_points`/`season_gp`/`season_p1`/`season_rating`). Past rows are never recomputed when the rules change — **this is the core invariant: a formula change must only affect future GPs.**
+Views: `season_standings` (each player's last ledger row per season, incl. `global_rating` at that point — used for tie-breaks) and `season_summaries` (GP count per season).
 
-Rating formula: `R = sum_points / (global_prior + gp_count)`, rounded to 4 decimals — a Bayesian average with a fixed prior of 20 phantom zero-point games. Ratings live in [0, 15]; 15 is approached only by someone who wins every race. A newcomer finishing P1 once scores 15/21 ≈ 0.71, while a 34-GP player with solid results scores proportionally higher. The prior is intentionally strong: you need ~20 real GPs before your actual average dominates.
+**DB functions** (execute revoked from anon/authenticated — call via the service-role server client):
+- `submit_gp(p_results jsonb) → uuid` — inserts match + results + ledger rows in one transaction. `/api/matches` calls it.
+- `delete_gp(p_match uuid)` — deletes the GP, then `rescore_from` it: every later GP is re-scored in order **with the current rules** (accepted trade-off).
+- `score_gp`, `rescore_from`, `sync_player_ratings` — internals. To add a new formula, change `score_gp` (and add ledger columns for its state); old rows stay as they are.
+- Never write `race_results` directly — there is no trigger anymore, so the ledger would not be updated.
+
+Current rating formula (in `score_gp`): `R = total_points / (global_prior + gp_count)`, rounded to 4 decimals — a Bayesian average with a fixed prior of 20 phantom zero-point games. Ratings live in [0, 15]; 15 is approached only by someone who wins every race. A newcomer finishing P1 once scores 15/21 ≈ 0.71, while a 34-GP player with solid results scores proportionally higher. The prior is intentionally strong: you need ~20 real GPs before your actual average dominates.
 
 ---
 
@@ -103,8 +111,9 @@ src/
       page.tsx                  # Tab shell: Submit / Players / Results
     api/
       players/route.ts          # GET (list), POST (create)
-      players/[id]/route.ts     # GET (stats), DELETE
-      matches/route.ts          # POST (submit GP)
+      players/[id]/route.ts     # GET (stats), PATCH (avatar / archived), DELETE (archives if the player has GPs)
+      matches/route.ts          # POST (submit GP → rpc submit_gp)
+      matches/[id]/route.ts     # DELETE (rpc delete_gp — re-scores later GPs)
       history/route.ts          # GET (paginated match history)
       scoring/route.ts          # GET (points table + priors from the DB)
 
@@ -156,7 +165,7 @@ useLeaderboard
   └── state: players (RankedPlayer[]), celebrationWinner, loading, error
 ```
 
-The 800 ms debounce lets the DB trigger finish updating all player ratings before fetching, so the leaderboard never shows a half-updated state. The 15 s poll is the real reliability workhorse — WebSockets drop on long-running office connections.
+The 800 ms debounce lets all realtime events of a submission settle before fetching, so the leaderboard never shows a half-updated state. The 15 s poll is the real reliability workhorse — WebSockets drop on long-running office connections.
 
 ### Submit flow (write path)
 ```
@@ -214,7 +223,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 - **Ordering:** every leaderboard sorts with `compareRank` (`src/lib/ranking.ts`): rating ↓, then P1 count ↓, then (seasons only) global rating ↓, then name. Season winner = first row of `seasonStandings`, so the ranking and the winner can never disagree. `/api/players` returns `p1_count` and is pre-sorted.
 - **Seasons** are calendar months in **`America/Montreal`** time (`toYearMonth` / `currentYearMonth` in `src/lib/season.ts`). Never slice ISO strings for months — that's UTC.
 - **Row limit:** Supabase silently caps every select at 1000 rows. Any query over a growing table (`race_results`, `matches`) must go through `fetchAll` (`src/lib/fetch-all.ts`) with a stable `.order(...)`, ending in `id`.
-- **Submitting a GP:** `/api/matches` creates the match then inserts results; if the results insert fails it deletes the match, so no empty GPs are left behind.
+- **Submitting a GP** is atomic (`submit_gp`), so empty GPs can't happen.
+- **Archived players** are excluded from `/api/players` (use `?archived=1` to list them), the lobby and the current season, but stay in GP history and past seasons. Players with GPs are never hard-deleted.
+- **Celebration:** only a latest GP *newer* than the last one seen is celebrated — deleting the latest GP must not re-celebrate the previous one.
 
 ### `RankedPlayer.rankDelta`
 `useLeaderboard` exports `RankedPlayer` (extends `Player` with `rankDelta: number`). Positive = moved up, negative = moved down. Zero on first load or for new players.

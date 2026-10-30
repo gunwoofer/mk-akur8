@@ -66,6 +66,7 @@ export function useLeaderboard() {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastMatchIdRef = useRef<string | undefined>(undefined);
+  const lastMatchAtRef = useRef(0);
 
   const doFetch = useCallback(async () => {
     try {
@@ -78,8 +79,12 @@ export function useLeaderboard() {
 
       const sorted = sortByRating(data);
       const latestId: string = history.length > 0 ? history[0].match_id : "none";
+      const latestAt = history.length > 0 ? Date.parse(history[0].played_at) : 0;
       const isFirstLoad = lastMatchIdRef.current === undefined;
-      const isNewGP = !isFirstLoad && latestId !== "none" && latestId !== lastMatchIdRef.current;
+      // Only a GP newer than the last one seen is new — deleting the latest GP
+      // surfaces an older one, which must not be celebrated again.
+      const isNewGP = !isFirstLoad && latestId !== "none" && latestId !== lastMatchIdRef.current
+        && latestAt > lastMatchAtRef.current;
       const latestMatch = history.length > 0 ? (history as HistoryEntry[])[0] : null;
       const gpCommitted = isNewGP && (latestMatch?.results.length ?? 0) > 0;
 
@@ -146,9 +151,11 @@ export function useLeaderboard() {
           setGpRecap((prev) => prev ?? recapEntries);
 
           lastMatchIdRef.current = latestId;
+          lastMatchAtRef.current = latestAt;
         }
       } else {
         lastMatchIdRef.current = latestId;
+        lastMatchAtRef.current = latestAt;
       }
 
       setPlayers(newRanked);

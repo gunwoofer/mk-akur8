@@ -4,9 +4,12 @@ import { compareRank } from "@/lib/ranking";
 import { fetchAll } from "@/lib/fetch-all";
 import type { Player } from "@/types";
 
-export async function GET() {
+// ?archived=1 lists archived players instead of active ones.
+export async function GET(req: NextRequest) {
+  const archived = new URL(req.url).searchParams.get("archived") === "1";
   const supabase = getServerSupabase();
-  const { data, error } = await supabase.from("players").select("*");
+  const query = supabase.from("players").select("*");
+  const { data, error } = await (archived ? query.not("archived_at", "is", null) : query.is("archived_at", null));
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   let wins: { player_id: string }[];

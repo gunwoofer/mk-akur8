@@ -6,6 +6,7 @@ export interface Player {
   rating: number;
   gp_played: number;
   p1_count?: number;
+  archived_at?: string | null;
 }
 
 export interface Match {

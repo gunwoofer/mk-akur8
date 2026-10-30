@@ -11,7 +11,7 @@ import type { SeasonInfo } from "@/types";
 export async function GET() {
   const data = await loadSeasonData(getServerSupabase());
   const nowYM = currentYearMonth();
-  const hasGames = data.byMonth.has(nowYM);
+  const hasGames = data.gpCounts.has(nowYM);
 
   const season_info: SeasonInfo = {
     season_number: hasGames ? data.sortedMonths.indexOf(nowYM) + 1 : data.sortedMonths.length + 1,
@@ -23,13 +23,13 @@ export async function GET() {
   };
 
   const seasonWins = computeSeasonWins(data, nowYM);
-  const standings = seasonStandings(data.byMonth.get(nowYM) ?? [], data);
+  const standings = seasonStandings(nowYM, data).filter((s) => !s.player.archived_at);
 
   // Past season winners stay on the board even before they play this month.
   const playing = new Set(standings.map((s) => s.player.id));
   const idleWinners: SeasonStanding[] = data.players
-    .filter((p) => !playing.has(p.id) && (seasonWins.get(p.id) ?? 0) > 0)
-    .map((player) => ({ player, points: 0, gp: 0, p1: 0, rating: 0 }));
+    .filter((p) => !p.archived_at && !playing.has(p.id) && (seasonWins.get(p.id) ?? 0) > 0)
+    .map((player) => ({ player, points: 0, gp: 0, p1: 0, rating: 0, globalRating: player.rating }));
 
   const ranking = [...standings, ...idleWinners]
     .sort((a, b) => compareRank(rankKey(a), rankKey(b)))

@@ -15,6 +15,8 @@ export const api = {
   players: {
     list: () =>
       apiFetch<Player[]>("/api/players"),
+    archived: () =>
+      apiFetch<Player[]>("/api/players?archived=1"),
     create: (name: string, character_avatar: string) =>
       apiFetch<Player>("/api/players", {
         method: "POST",
@@ -22,7 +24,13 @@ export const api = {
         body: JSON.stringify({ name, character_avatar }),
       }),
     delete: (id: string) =>
-      apiFetch<{ deleted: string }>(`/api/players/${id}`, { method: "DELETE" }),
+      apiFetch<{ deleted: string } | { archived: string }>(`/api/players/${id}`, { method: "DELETE" }),
+    restore: (id: string) =>
+      apiFetch<Player>(`/api/players/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ archived: false }),
+      }),
     stats: (id: string) =>
       apiFetch<PlayerStats>(`/api/players/${id}`),
     updateAvatar: (id: string, avatarUrl: string | null) =>
@@ -39,6 +47,8 @@ export const api = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ results }),
       }),
+    delete: (id: string) =>
+      apiFetch<{ deleted: string }>(`/api/matches/${id}`, { method: "DELETE" }),
   },
   history: {
     list: (params?: { limit?: number; offset?: number }) => {

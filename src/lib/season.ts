@@ -3,32 +3,23 @@ import { compareRank } from "@/lib/ranking";
 import { fetchAll } from "@/lib/fetch-all";
 import type { SeasonPlayer } from "@/types";
 
-export interface MatchRow {
-  id: string;
-  played_at: string;
-}
-
-export interface ResultRow {
-  match_id: string;
-  player_id: string;
-  position: number;
-}
-
 export interface PlayerRow {
   id: string;
   name: string;
   character_avatar: string;
   avatar_url: string | null;
   rating: number;
+  archived_at: string | null;
 }
 
-export interface SeasonData {
-  results: ResultRow[];
-  players: PlayerRow[];
-  points: Map<number, number>;
-  seasonPrior: number;
-  byMonth: Map<string, string[]>;
-  sortedMonths: string[];
+interface StandingRow {
+  season: string;
+  player_id: string;
+  season_points: number;
+  season_gp: number;
+  season_p1: number;
+  season_rating: number;
+  global_rating: number;
 }
 
 export interface SeasonStanding {
@@ -37,12 +28,18 @@ export interface SeasonStanding {
   gp: number;
   p1: number;
   rating: number;
+  globalRating: number;
 }
 
-const TIME_ZONE = "America/Montreal";
+export interface SeasonData {
+  players: PlayerRow[];
+  standings: Map<string, SeasonStanding[]>;
+  gpCounts: Map<string, number>;
+  sortedMonths: string[];
+}
 
 const montrealDateFormat = new Intl.DateTimeFormat("en-CA", {
-  timeZone: TIME_ZONE,
+  timeZone: "America/Montreal",
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
@@ -53,10 +50,6 @@ function montrealDate(date: Date): { yearMonth: string; day: number } {
     montrealDateFormat.formatToParts(date).map((p) => [p.type, p.value])
   );
   return { yearMonth: `${parts.year}-${parts.month}`, day: Number(parts.day) };
-}
-
-export function toYearMonth(iso: string): string {
-  return montrealDate(new Date(iso)).yearMonth;
 }
 
 export function currentYearMonth(): string {
@@ -84,75 +77,58 @@ export function daysLeft(yearMonth: string): number {
   return daysInMonth(yearMonth) - today.day;
 }
 
+export function rankKey(s: SeasonStanding) {
+  return { rating: s.rating, p1: s.p1, tiebreakRating: s.globalRating, name: s.player.name };
+}
+
+// Season figures are frozen in the rating_changes ledger when each GP is submitted
+// (month in Montreal time, season rating, P1s, global rating at that point), so a
+// closed season never changes when the scoring rules do.
 export async function loadSeasonData(supabase: SupabaseClient): Promise<SeasonData> {
-  const [
-    matchRows,
-    resultRows,
-    { data: playerRows },
-    { data: pointRows },
-    { data: settings },
-  ] = await Promise.all([
-    fetchAll<MatchRow>((from, to) =>
-      supabase.from("matches").select("id, played_at")
-        .order("played_at", { ascending: true }).order("id").range(from, to)),
-    fetchAll<ResultRow>((from, to) =>
-      supabase.from("race_results").select("match_id, player_id, position").order("id").range(from, to)),
-    supabase.from("players").select("id, name, character_avatar, avatar_url, rating"),
-    supabase.from("position_points").select("position, points"),
-    supabase.from("scoring_settings").select("season_prior").single(),
-  ]);
+  const [standingRows, { data: summaryRows, error: summaryError }, { data: playerRows, error: playerError }] =
+    await Promise.all([
+      fetchAll<StandingRow>((from, to) =>
+        supabase.from("season_standings").select("*").order("season").order("player_id").range(from, to)),
+      supabase.from("season_summaries").select("season, gp_count"),
+      supabase.from("players").select("id, name, character_avatar, avatar_url, rating, archived_at"),
+    ]);
 
-  if (!settings) throw new Error("scoring_settings row is missing");
+  if (summaryError || playerError) throw new Error((summaryError ?? playerError)!.message);
 
-  const byMonth = new Map<string, string[]>();
-  for (const m of matchRows) {
-    const ym = toYearMonth(m.played_at);
-    const arr = byMonth.get(ym) ?? [];
-    arr.push(m.id);
-    byMonth.set(ym, arr);
+  const players = (playerRows ?? []) as PlayerRow[];
+  const playerMap = new Map(players.map((p) => [p.id, p]));
+
+  const standings = new Map<string, SeasonStanding[]>();
+  for (const row of standingRows) {
+    const player = playerMap.get(row.player_id);
+    if (!player) continue;
+    const list = standings.get(row.season) ?? [];
+    list.push({
+      player,
+      points: row.season_points,
+      gp: row.season_gp,
+      p1: row.season_p1,
+      rating: row.season_rating,
+      globalRating: row.global_rating,
+    });
+    standings.set(row.season, list);
   }
+  for (const list of standings.values()) list.sort((a, b) => compareRank(rankKey(a), rankKey(b)));
 
-  return {
-    results: resultRows,
-    players: (playerRows ?? []) as PlayerRow[],
-    points: new Map((pointRows ?? []).map((r: { position: number; points: number }) => [r.position, r.points])),
-    seasonPrior: settings.season_prior,
-    byMonth,
-    sortedMonths: [...byMonth.keys()].sort(),
-  };
+  const gpCounts = new Map((summaryRows ?? []).map((r: { season: string; gp_count: number }) => [r.season, r.gp_count]));
+
+  return { players, standings, gpCounts, sortedMonths: [...gpCounts.keys()].sort() };
 }
 
-export function seasonStandings(matchIds: string[], data: SeasonData): SeasonStanding[] {
-  const matchSet = new Set(matchIds);
-  const totals = new Map<string, { points: number; gp: number; p1: number }>();
-  for (const r of data.results) {
-    if (!matchSet.has(r.match_id)) continue;
-    const t = totals.get(r.player_id) ?? { points: 0, gp: 0, p1: 0 };
-    t.points += data.points.get(r.position) ?? 0;
-    t.gp += 1;
-    if (r.position === 1) t.p1 += 1;
-    totals.set(r.player_id, t);
-  }
-
-  const playerMap = new Map(data.players.map((p) => [p.id, p]));
-  return [...totals.entries()]
-    .flatMap(([pid, t]): SeasonStanding[] => {
-      const player = playerMap.get(pid);
-      if (!player) return [];
-      return [{ player, ...t, rating: t.points / (data.seasonPrior + t.gp) }];
-    })
-    .sort((a, b) => compareRank(rankKey(a), rankKey(b)));
-}
-
-export function rankKey(s: Pick<SeasonStanding, "player" | "rating" | "p1">) {
-  return { rating: s.rating, p1: s.p1, tiebreakRating: s.player.rating, name: s.player.name };
+export function seasonStandings(yearMonth: string, data: SeasonData): SeasonStanding[] {
+  return data.standings.get(yearMonth) ?? [];
 }
 
 export function computeSeasonWins(data: SeasonData, upToExclusive: string): Map<string, number> {
   const seasonWins = new Map<string, number>();
   for (const ym of data.sortedMonths) {
     if (ym >= upToExclusive) break;
-    const winner = seasonStandings(data.byMonth.get(ym) ?? [], data)[0];
+    const winner = seasonStandings(ym, data)[0];
     if (winner) seasonWins.set(winner.player.id, (seasonWins.get(winner.player.id) ?? 0) + 1);
   }
   return seasonWins;

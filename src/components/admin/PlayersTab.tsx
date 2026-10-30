@@ -26,11 +26,15 @@ export default function PlayersTab() {
   // Persists the target player ID across state resets during the file-pick flow
   const pendingPlayerIdRef = useRef<string | null>(null);
 
+  const [archivedPlayers, setArchivedPlayers] = useState<Player[]>([]);
+
   async function fetchPlayers() {
     setLoading(true);
     setFetchError(null);
     try {
-      setPlayers(await api.players.list());
+      const [active, archived] = await Promise.all([api.players.list(), api.players.archived()]);
+      setPlayers(active);
+      setArchivedPlayers(archived);
     } catch (err) {
       setFetchError(err instanceof Error ? err.message : "Failed to load players");
     } finally {
@@ -56,11 +60,25 @@ export default function PlayersTab() {
     }
   }
 
-  async function deletePlayer(id: string) {
-    if (!confirm("Remove this player?")) return;
+  async function deletePlayer(player: Player) {
+    const message = player.gp_played > 0
+      ? `Archive ${player.name}?\n\nThey'll be hidden from the leaderboards and the lobby. Their GP history and past seasons are kept, and you can restore them anytime.`
+      : `Delete ${player.name}?`;
+    if (!confirm(message)) return;
     try {
-      await api.players.delete(id);
-      setPlayers((prev) => prev.filter((p) => p.id !== id));
+      const res = await api.players.delete(player.id);
+      setPlayers((prev) => prev.filter((p) => p.id !== player.id));
+      if ("archived" in res) setArchivedPlayers((prev) => [...prev, { ...player, archived_at: new Date().toISOString() }]);
+    } catch {
+      // non-critical
+    }
+  }
+
+  async function restorePlayer(player: Player) {
+    try {
+      await api.players.restore(player.id);
+      setArchivedPlayers((prev) => prev.filter((p) => p.id !== player.id));
+      setPlayers(await api.players.list());
     } catch {
       // non-critical
     }
@@ -242,7 +260,8 @@ export default function PlayersTab() {
                   <p className="text-gray-600 text-xs">{p.gp_played} GPs · {p.rating.toFixed(2)} pts</p>
                 </div>
                 <button
-                  onClick={() => deletePlayer(p.id)}
+                  onClick={() => deletePlayer(p)}
+                  aria-label={p.gp_played > 0 ? "Archive player" : "Delete player"}
                   className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-gray-700 hover:text-red-400 hover:bg-red-400/10 transition-colors text-xs"
                 >
                   ✕
@@ -252,6 +271,37 @@ export default function PlayersTab() {
           </AnimatePresence>
         )}
       </div>
+
+      {archivedPlayers.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-600">
+            Archived · {archivedPlayers.length}
+          </p>
+          {archivedPlayers.map((p) => (
+            <div
+              key={p.id}
+              className="flex items-center gap-3 bg-[#141414] border border-[#1e1e1e] rounded-2xl px-4 py-3 opacity-60"
+            >
+              <AvatarDisplay
+                avatarUrl={p.avatar_url}
+                characterAvatar={p.character_avatar}
+                imgClassName="w-8 h-8"
+                emojiClassName="text-xl"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-semibold text-sm truncate">{p.name}</p>
+                <p className="text-gray-600 text-xs">{p.gp_played} GPs · {p.rating.toFixed(2)} pts</p>
+              </div>
+              <button
+                onClick={() => restorePlayer(p)}
+                className="shrink-0 px-3 py-1.5 rounded-lg text-[#00d4ff] text-xs font-semibold border border-[#00d4ff]/30 hover:bg-[#00d4ff]/10 transition-colors"
+              >
+                Restore
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Photo action sheet */}
       <AnimatePresence>
