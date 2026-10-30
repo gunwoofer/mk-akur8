@@ -10,9 +10,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div
       className="w-full min-h-screen overflow-hidden"
       style={{
-        backgroundImage: "url('/mario-kart-world-bg.jpg')",
+        backgroundImage: "url('/dashboard-bg.jpg')",
         backgroundSize: "cover",
-        backgroundPosition: "center top",
+        backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
       }}
     >
