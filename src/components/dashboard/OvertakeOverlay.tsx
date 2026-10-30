@@ -6,7 +6,7 @@ import AvatarDisplay from "@/components/AvatarDisplay";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import type { Overtake, OvertakePlayer } from "@/hooks/useLeaderboard";
 
-const SHOW_MS = 4500;
+const SHOW_MS = 7500;
 
 function Racer({ player, size, ring, dim }: { player: OvertakePlayer; size: number; ring: string; dim?: boolean }) {
   return (
