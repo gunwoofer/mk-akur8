@@ -213,6 +213,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 ### Ranking & seasons
 - **Ordering:** every leaderboard sorts with `compareRank` (`src/lib/ranking.ts`): rating ↓, then P1 count ↓, then (seasons only) global rating ↓, then name. Season winner = first row of `seasonStandings`, so the ranking and the winner can never disagree. `/api/players` returns `p1_count` and is pre-sorted.
 - **Seasons** are calendar months in **`America/Montreal`** time (`toYearMonth` / `currentYearMonth` in `src/lib/season.ts`). Never slice ISO strings for months — that's UTC.
+- **Row limit:** Supabase silently caps every select at 1000 rows. Any query over a growing table (`race_results`, `matches`) must go through `fetchAll` (`src/lib/fetch-all.ts`) with a stable `.order(...)`, ending in `id`.
 - **Submitting a GP:** `/api/matches` creates the match then inserts results; if the results insert fails it deletes the match, so no empty GPs are left behind.
 
 ### `RankedPlayer.rankDelta`

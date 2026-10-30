@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { compareRank } from "@/lib/ranking";
+import { fetchAll } from "@/lib/fetch-all";
 import type { SeasonPlayer } from "@/types";
 
 export interface MatchRow {
@@ -85,14 +86,17 @@ export function daysLeft(yearMonth: string): number {
 
 export async function loadSeasonData(supabase: SupabaseClient): Promise<SeasonData> {
   const [
-    { data: matchRows },
-    { data: resultRows },
+    matchRows,
+    resultRows,
     { data: playerRows },
     { data: pointRows },
     { data: settings },
   ] = await Promise.all([
-    supabase.from("matches").select("id, played_at").order("played_at", { ascending: true }),
-    supabase.from("race_results").select("match_id, player_id, position"),
+    fetchAll<MatchRow>((from, to) =>
+      supabase.from("matches").select("id, played_at")
+        .order("played_at", { ascending: true }).order("id").range(from, to)),
+    fetchAll<ResultRow>((from, to) =>
+      supabase.from("race_results").select("match_id, player_id, position").order("id").range(from, to)),
     supabase.from("players").select("id, name, character_avatar, avatar_url, rating"),
     supabase.from("position_points").select("position, points"),
     supabase.from("scoring_settings").select("season_prior").single(),
@@ -101,7 +105,7 @@ export async function loadSeasonData(supabase: SupabaseClient): Promise<SeasonDa
   if (!settings) throw new Error("scoring_settings row is missing");
 
   const byMonth = new Map<string, string[]>();
-  for (const m of (matchRows ?? []) as MatchRow[]) {
+  for (const m of matchRows) {
     const ym = toYearMonth(m.played_at);
     const arr = byMonth.get(ym) ?? [];
     arr.push(m.id);
@@ -109,7 +113,7 @@ export async function loadSeasonData(supabase: SupabaseClient): Promise<SeasonDa
   }
 
   return {
-    results: (resultRows ?? []) as ResultRow[],
+    results: resultRows,
     players: (playerRows ?? []) as PlayerRow[],
     points: new Map((pointRows ?? []).map((r: { position: number; points: number }) => [r.position, r.points])),
     seasonPrior: settings.season_prior,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase-server";
+import { fetchAll } from "@/lib/fetch-all";
 
 interface ResultRow {
   position: number;
@@ -50,13 +51,18 @@ export async function GET(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 404 });
 
-  const { data: allResults } = await supabase
-    .from("race_results")
-    .select("position, match_id, matches(played_at)")
-    .eq("player_id", id)
-    .order("matches(played_at)", { ascending: false });
+  const allResults = await fetchAll((from, to) =>
+    supabase
+      .from("race_results")
+      .select("id, position, match_id, matches(played_at)")
+      .eq("player_id", id)
+      .order("id")
+      .range(from, to)
+  );
 
-  const rows = (allResults as unknown as ResultRow[]) ?? [];
+  const rows = (allResults as unknown as ResultRow[]).sort((a, b) =>
+    (b.matches?.played_at ?? "").localeCompare(a.matches?.played_at ?? "")
+  );
   const allPositions = rows.map((r) => r.position);
   const podiums = allPositions.filter((p) => p <= 3).length;
   const worstFinish = allPositions.length ? Math.max(...allPositions) : 0;

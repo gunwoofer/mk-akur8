@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase-server";
+import { fetchAll } from "@/lib/fetch-all";
 
 interface ResultRow {
   match_id: string;
@@ -14,24 +15,24 @@ interface MatchRow {
 export async function GET() {
   const supabase = getServerSupabase();
 
-  const [{ data: matchRows, error: matchErr }, { data: playerRows }] = await Promise.all([
-    supabase.from("matches").select("id").order("played_at", { ascending: false }),
-    supabase.from("players").select("id, name"),
-  ]);
+  let matchRows: MatchRow[];
+  let rows: ResultRow[];
+  try {
+    [matchRows, rows] = await Promise.all([
+      fetchAll<MatchRow>((from, to) =>
+        supabase.from("matches").select("id")
+          .order("played_at", { ascending: false }).order("id").range(from, to)),
+      fetchAll<ResultRow>((from, to) =>
+        supabase.from("race_results").select("match_id, player_id, position").order("id").range(from, to)),
+    ]);
+  } catch (err) {
+    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+  }
+  const { data: playerRows } = await supabase.from("players").select("id, name");
 
-  if (matchErr) return NextResponse.json({ error: matchErr.message }, { status: 500 });
-
-  const matchIds = (matchRows ?? []).map((m: MatchRow) => m.id);
+  const matchIds = matchRows.map((m) => m.id);
   if (matchIds.length === 0) return NextResponse.json(null);
 
-  const { data: resultRows, error: resultErr } = await supabase
-    .from("race_results")
-    .select("match_id, player_id, position")
-    .in("match_id", matchIds);
-
-  if (resultErr) return NextResponse.json({ error: resultErr.message }, { status: 500 });
-
-  const rows = (resultRows as ResultRow[]) ?? [];
   const playerNameMap = new Map((playerRows ?? []).map((p: { id: string; name: string }) => [p.id, p.name]));
 
   const byMatch = new Map<string, { player_id: string; position: number }[]>();
