@@ -1,4 +1,11 @@
 import type { Metadata } from "next";
+import { Russo_One } from "next/font/google";
+
+const racing = Russo_One({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-racing",
+});
 
 export const metadata: Metadata = {
   title: "MK Akur8 — Live Leaderboard",
@@ -8,7 +15,7 @@ export const metadata: Metadata = {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="w-full min-h-screen overflow-hidden"
+      className={`${racing.variable} w-full min-h-screen overflow-hidden`}
       style={{
         backgroundImage: "url('/dashboard-bg.jpg')",
         backgroundSize: "cover",

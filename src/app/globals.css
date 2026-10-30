@@ -78,3 +78,62 @@ body {
       rgba(255, 255, 255, 0.015) 4px
     );
 }
+
+/* ─── Dashboard: Mario Kart look ─────────────────────────────────────────────
+   Written for Safari 12 (the TV's iPad): explicit -webkit- prefixes, no flex gap,
+   no clip-path / conic-gradient / aspect-ratio. */
+
+.font-racing {
+  font-family: var(--font-racing), "Arial Black", "Helvetica Neue", sans-serif;
+  font-style: italic;
+  letter-spacing: 0.01em;
+}
+
+/* Dark outline so text stays readable over the bright background */
+.text-outline {
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.85), 0 0 6px rgba(0, 0, 0, 0.6);
+}
+
+/* Metallic gradient text, like the Mario Kart logo */
+.mk-title {
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  -webkit-filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.85));
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.85));
+}
+.mk-title { background-image: linear-gradient(180deg, #fff36b 0%, #ffd400 40%, #ff7a00 100%); }
+
+.checkered {
+  background-color: #111111;
+  background-image:
+    linear-gradient(45deg, #f5f5f5 25%, transparent 25%, transparent 75%, #f5f5f5 75%),
+    linear-gradient(45deg, #f5f5f5 25%, transparent 25%, transparent 75%, #f5f5f5 75%);
+  background-size: 12px 12px;
+  background-position: 0 0, 6px 6px;
+}
+
+/* Slanted kart-HUD panel: the skewed layer sits behind straight content */
+.hud-row {
+  position: relative;
+}
+.hud-row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  -webkit-transform: skewX(-12deg);
+  transform: skewX(-12deg);
+  background: rgba(8, 8, 12, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-left: 6px solid var(--hud-accent, rgba(255, 255, 255, 0.25));
+  border-radius: 6px;
+  z-index: 0;
+}
+.hud-row > * {
+  position: relative;
+  z-index: 1;
+}

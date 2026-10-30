@@ -17,25 +17,25 @@ export default function SeasonProgressBar({ info }: Props) {
   return (
     <div className="mb-4 shrink-0">
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-white font-black text-sm uppercase tracking-widest">
+        <span className="font-racing text-outline text-white text-base uppercase tracking-wider">
           {info.month_name}
-          <span className="text-[#00d4ff] ml-2">— Season {info.season_number}</span>
+          <span className="text-[#ffd400] ml-2">— Season {info.season_number}</span>
         </span>
         {info.has_games ? (
-          <span className="text-[#6b7280] text-xs tabular-nums">
+          <span className="text-[#e5e7eb] text-xs tabular-nums text-outline">
             {info.days_left === 0 ? "Last day" : `${info.days_left} day${info.days_left !== 1 ? "s" : ""} left`}
           </span>
         ) : (
-          <span className="text-[#4b5563] text-xs italic">Season starts with your next GP</span>
+          <span className="text-[#cbd5e1] text-xs italic text-outline">Season starts with your next GP</span>
         )}
       </div>
-      <div className="h-1.5 w-full bg-[#1a1a1a] rounded-full overflow-hidden border border-[#2a2a2a]">
+      <div className="h-2 w-full bg-black/60 rounded-full overflow-hidden border border-white/10">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${progress * 100}%` }}
           transition={{ duration: 1, ease: "easeOut" }}
           className="h-full rounded-full"
-          style={{ background: "linear-gradient(90deg, #00d4ff, #0099bb)" }}
+          style={{ background: "linear-gradient(90deg, #e60012, #ff7a00 60%, #ffd400)" }}
         />
       </div>
     </div>
