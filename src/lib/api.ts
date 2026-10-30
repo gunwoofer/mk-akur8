@@ -1,4 +1,4 @@
-import type { Player, PlayerStats, HistoryEntry, SeasonInfo, SeasonPlayer, SeasonSummary, StreakResponse } from "@/types";
+import type { Player, PlayerStats, HistoryEntry, ScoringConfig, SeasonInfo, SeasonPlayer, SeasonSummary, StreakResponse } from "@/types";
 
 export type SubmitResult = { player_id: string; position: number };
 
@@ -60,5 +60,9 @@ export const api = {
       apiFetch<SeasonSummary[]>("/api/seasons"),
     get: (yearMonth: string) =>
       apiFetch<{ ranking: SeasonPlayer[] }>(`/api/seasons/${yearMonth}`),
+  },
+  scoring: {
+    get: () =>
+      apiFetch<ScoringConfig>("/api/scoring"),
   },
 };

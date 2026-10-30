@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getSupabase } from "@/lib/supabase";
 import { api } from "@/lib/api";
+import { compareRank } from "@/lib/ranking";
 import type { Player, HistoryEntry, SeasonInfo, SeasonPlayer, BestStreak } from "@/types";
 
 export interface RankedPlayer extends Player {
@@ -37,9 +38,10 @@ export interface RecapEntry {
 }
 
 function sortByRating(players: Player[]): Player[] {
-  return [...players].sort(
-    (a, b) => b.rating - a.rating || a.name.localeCompare(b.name)
-  );
+  return [...players].sort((a, b) => compareRank(
+    { rating: a.rating, p1: a.p1_count ?? 0, name: a.name },
+    { rating: b.rating, p1: b.p1_count ?? 0, name: b.name },
+  ));
 }
 
 export function useLeaderboard() {

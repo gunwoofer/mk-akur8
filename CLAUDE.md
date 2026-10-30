@@ -72,11 +72,18 @@ position   int  (1–24; positions not occupied by real players are bots, not st
 position   int PK  (1–24)
 points     int
 ```
-Positions 1–12 award 15/12/10/9/8/7/6/5/4/3/2/1 points. Positions 13–24 award 0. This is mirrored client-side in `src/lib/points.ts` for display without an extra fetch.
+Positions 1–12 award 15/12/10/9/8/7/6/5/4/3/2/1 points. Positions 13–24 award 0. **Single source of truth** — no copy in code. Server code reads it directly; the client reads it via `api.scoring.get()` (`GET /api/scoring`).
 
-**DB trigger:** After every `race_results` INSERT, a Postgres trigger recalculates `rating` and `gp_played` for all affected players.
+**`scoring_settings`** — single row (`id = true`), single source for the priors
+```
+global_prior  int  (20 — phantom games in the global rating, used by the DB trigger)
+season_prior  int  ( 5 — phantom games in the season rating, used by src/lib/season.ts)
+```
+After changing `scoring_settings` or `position_points` in Supabase, run `select recalculate_all_ratings();` — stored ratings are not recomputed automatically.
 
-Rating formula: `R = sum_points / (20 + gp_count)` — a Bayesian average with a fixed prior of 20 phantom zero-point games. Ratings live in [0, 15]; 15 is approached only by someone who wins every race. A newcomer finishing P1 once scores 15/21 ≈ 0.71, while a 34-GP player with solid results scores proportionally higher. The prior is intentionally strong: you need ~20 real GPs before your actual average dominates.
+**DB trigger:** After every `race_results` INSERT, a Postgres trigger calls `recalculate_ratings_for(player_ids)` for all players in that match. Only INSERT fires it — manual UPDATE/DELETE of results leaves ratings stale until `recalculate_all_ratings()` is run.
+
+Rating formula: `R = sum_points / (global_prior + gp_count)`, rounded to 4 decimals — a Bayesian average with a fixed prior of 20 phantom zero-point games. Ratings live in [0, 15]; 15 is approached only by someone who wins every race. A newcomer finishing P1 once scores 15/21 ≈ 0.71, while a 34-GP player with solid results scores proportionally higher. The prior is intentionally strong: you need ~20 real GPs before your actual average dominates.
 
 ---
 
@@ -99,6 +106,7 @@ src/
       players/[id]/route.ts     # GET (stats), DELETE
       matches/route.ts          # POST (submit GP)
       history/route.ts          # GET (paginated match history)
+      scoring/route.ts          # GET (points table + priors from the DB)
 
   components/
     dashboard/
@@ -126,7 +134,8 @@ src/
     api.ts                      # Typed fetch client — all HTTP calls go through here
     supabase.ts                 # Client singleton (getSupabase)
     supabase-server.ts          # Server client factory (getServerSupabase)
-    points.ts                   # POINTS_TABLE + getPoints() — mirrors DB table
+    ranking.ts                  # compareRank() — the one ordering rule for every leaderboard
+    season.ts                   # Server-only: loadSeasonData, seasonStandings, Montreal-time months
 
   types/
     index.ts                    # Shared interfaces (Player, HistoryEntry, PlayerStats, …)
@@ -200,6 +209,11 @@ Route params are a Promise in this Next.js version. Always `await` them:
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 ```
+
+### Ranking & seasons
+- **Ordering:** every leaderboard sorts with `compareRank` (`src/lib/ranking.ts`): rating ↓, then P1 count ↓, then (seasons only) global rating ↓, then name. Season winner = first row of `seasonStandings`, so the ranking and the winner can never disagree. `/api/players` returns `p1_count` and is pre-sorted.
+- **Seasons** are calendar months in **`America/Montreal`** time (`toYearMonth` / `currentYearMonth` in `src/lib/season.ts`). Never slice ISO strings for months — that's UTC.
+- **Submitting a GP:** `/api/matches` creates the match then inserts results; if the results insert fails it deletes the match, so no empty GPs are left behind.
 
 ### `RankedPlayer.rankDelta`
 `useLeaderboard` exports `RankedPlayer` (extends `Player` with `rankDelta: number`). Positive = moved up, negative = moved down. Zero on first load or for new players.

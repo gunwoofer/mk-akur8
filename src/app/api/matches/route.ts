@@ -46,6 +46,8 @@ export async function POST(req: NextRequest) {
   const { error: resultsError } = await supabase.from("race_results").insert(rows);
 
   if (resultsError) {
+    // Don't leave an empty GP behind — it would count as a played match in seasons.
+    await supabase.from("matches").delete().eq("id", match.id);
     return NextResponse.json({ error: resultsError.message }, { status: 500 });
   }
 

@@ -5,6 +5,7 @@ export interface Player {
   avatar_url?: string | null;
   rating: number;
   gp_played: number;
+  p1_count?: number;
 }
 
 export interface Match {
@@ -102,4 +103,10 @@ export interface SeasonSummary {
     avatar_url: string | null;
     season_rating: number;
   }>;
+}
+
+export interface ScoringConfig {
+  points: { position: number; points: number }[];
+  global_prior: number;
+  season_prior: number;
 }

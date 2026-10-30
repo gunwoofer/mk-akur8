@@ -1,15 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase-server";
+import { compareRank } from "@/lib/ranking";
+import type { Player } from "@/types";
 
 export async function GET() {
   const supabase = getServerSupabase();
-  const { data, error } = await supabase
-    .from("players")
-    .select("*")
-    .order("rating", { ascending: false });
+  const [{ data, error }, { data: wins, error: winsError }] = await Promise.all([
+    supabase.from("players").select("*"),
+    supabase.from("race_results").select("player_id").eq("position", 1),
+  ]);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  if (error || winsError) {
+    return NextResponse.json({ error: (error ?? winsError)!.message }, { status: 500 });
+  }
+
+  const p1Counts = new Map<string, number>();
+  for (const { player_id } of wins ?? []) p1Counts.set(player_id, (p1Counts.get(player_id) ?? 0) + 1);
+
+  const players: Player[] = (data ?? [])
+    .map((p) => ({ ...p, p1_count: p1Counts.get(p.id) ?? 0 }))
+    .sort((a, b) => compareRank(
+      { rating: a.rating, p1: a.p1_count, name: a.name },
+      { rating: b.rating, p1: b.p1_count, name: b.name },
+    ));
+
+  return NextResponse.json(players);
 }
 
 export async function POST(req: NextRequest) {

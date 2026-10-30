@@ -1,9 +1,40 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { POINTS_TABLE } from "@/lib/points";
+import { api } from "@/lib/api";
+import type { ScoringConfig } from "@/types";
+
+function ordinal(n: number): string {
+  const suffix = n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th";
+  return `${n}${suffix}`;
+}
+
+// Collapse the trailing run of zero-point positions into one "13th–24th" cell.
+function pointsCells(points: ScoringConfig["points"]): { pos: string; pts: number }[] {
+  const lastScoring = points.reduce((last, r) => (r.points > 0 ? r.position : last), 0);
+  const cells = points
+    .filter((r) => r.position <= lastScoring)
+    .map((r) => ({ pos: ordinal(r.position), pts: r.points }));
+  const zeros = points.filter((r) => r.position > lastScoring);
+  if (zeros.length === 1) cells.push({ pos: ordinal(zeros[0].position), pts: 0 });
+  if (zeros.length > 1) cells.push({ pos: `${ordinal(zeros[0].position)}–${ordinal(zeros[zeros.length - 1].position)}`, pts: 0 });
+  return cells;
+}
 
 export default function RankingInfoModal({ onClose }: { onClose: () => void }) {
+  const [config, setConfig] = useState<ScoringConfig | null>(null);
+
+  useEffect(() => {
+    api.scoring.get().then(setConfig).catch(() => {});
+  }, []);
+
+  const prior = config?.global_prior ?? 0;
+  const ptsAt = (position: number) => config?.points.find((r) => r.position === position)?.points ?? 0;
+  const rating = (points: number, gps: number) => (points / (prior + gps)).toFixed(2);
+  const p1 = ptsAt(1);
+  const p3 = ptsAt(3);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -38,6 +69,9 @@ export default function RankingInfoModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+          {!config ? (
+            <p className="text-gray-600 text-sm text-center py-12">Loading…</p>
+          ) : (<>
 
           {/* Step 1 — Points */}
           <section>
@@ -48,7 +82,7 @@ export default function RankingInfoModal({ onClose }: { onClose: () => void }) {
               Every Grand Prix awards points based on where you finish. Only human players are scored — bots fill the remaining slots silently.
             </p>
             <div className="grid grid-cols-4 gap-1">
-              {POINTS_TABLE.map(({ pos, pts }) => (
+              {pointsCells(config.points).map(({ pos, pts }) => (
                 <div
                   key={pos}
                   className="flex items-center justify-between bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-2"
@@ -68,22 +102,22 @@ export default function RankingInfoModal({ onClose }: { onClose: () => void }) {
               Step 2 — Experience-Weighted Rating
             </p>
             <p className="text-gray-400 text-sm mb-4">
-              Raw totals favour whoever races the most. Instead, your rating is your total points divided by your games played — but with <span className="text-white font-medium">20 phantom zero-point races</span> added to the denominator. New players start near zero and must earn their rank through consistent results.
+              Raw totals favour whoever races the most. Instead, your rating is your total points divided by your games played — but with <span className="text-white font-medium">{prior} phantom zero-point races</span> added to the denominator. New players start near zero and must earn their rank through consistent results.
             </p>
 
             <div className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl px-5 py-4 font-mono text-center">
               <p className="text-white text-lg">
                 R = <span className="text-[#00d4ff]">Σ points</span>
                 <span className="text-gray-600"> / </span>
-                <span className="text-[#00d4ff]">(20 + GPs played)</span>
+                <span className="text-[#00d4ff]">({prior} + GPs played)</span>
               </p>
             </div>
 
             <div className="mt-4 space-y-2.5">
               {[
-                { sym: "R", label: "Final rating — ranges from 0 to just below 15" },
+                { sym: "R", label: `Final rating — ranges from 0 to just below ${p1}` },
                 { sym: "Σ points", label: "Sum of all GP points this player has ever scored" },
-                { sym: "20", label: "Fixed prior: 20 phantom races at zero points, diluting early results" },
+                { sym: String(prior), label: `Fixed prior: ${prior} phantom races at zero points, diluting early results` },
                 { sym: "GPs played", label: "Total races entered; as this grows the prior loses influence" },
               ].map(({ sym, label }) => (
                 <div key={sym} className="flex gap-3">
@@ -101,10 +135,10 @@ export default function RankingInfoModal({ onClose }: { onClose: () => void }) {
             </p>
             <div className="space-y-2">
               {[
-                { label: "1 GP, P1 win (15 pts)",           rating: "0.71", note: "One great race counts little" },
-                { label: "10 GPs, always P3 (100 pts)",     rating: "3.33", note: "Consistency starts to show" },
-                { label: "20 GPs, always P1 (300 pts)",     rating: "7.50", note: "Dominance rewarded over time" },
-                { label: "Max possible — P1 every race",    rating: "→ 15", note: "Asymptotic ceiling, never reached" },
+                { label: `1 GP, P1 win (${p1} pts)`,          rating: rating(p1, 1),       note: "One great race counts little" },
+                { label: `10 GPs, always P3 (${p3 * 10} pts)`, rating: rating(p3 * 10, 10), note: "Consistency starts to show" },
+                { label: `20 GPs, always P1 (${p1 * 20} pts)`, rating: rating(p1 * 20, 20), note: "Dominance rewarded over time" },
+                { label: "Max possible — P1 every race",      rating: `→ ${p1}`,          note: "Asymptotic ceiling, never reached" },
               ].map(({ label, rating, note }) => (
                 <div key={label} className="flex items-center gap-3 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-4 py-2.5">
                   <div className="flex-1 min-w-0">
@@ -120,7 +154,7 @@ export default function RankingInfoModal({ onClose }: { onClose: () => void }) {
           {/* Summary callout */}
           <section className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-5 py-4">
             <p className="text-gray-300 text-sm leading-relaxed">
-              <span className="text-white font-semibold">The key insight:</span> winning one race takes you to 0.71. Winning twenty takes you to 7.50. You cannot shortcut the leaderboard — sustained front-running across many GPs is the only path to the top.
+              <span className="text-white font-semibold">The key insight:</span> winning one race takes you to {rating(p1, 1)}. Winning twenty takes you to {rating(p1 * 20, 20)}. You cannot shortcut the leaderboard — sustained front-running across many GPs is the only path to the top.
             </p>
           </section>
 
@@ -130,7 +164,7 @@ export default function RankingInfoModal({ onClose }: { onClose: () => void }) {
               Seasons
             </p>
             <p className="text-gray-400 text-sm mb-4">
-              Each calendar month is a <span className="text-white font-medium">Season</span>. The same Bayesian formula applies — but only to GPs played within that month, and with a smaller prior of <span className="text-white font-medium">5 phantom races</span> instead of 20. Ratings converge faster so a great week matters more. Resetting every month gives everyone a fresh shot regardless of their all-time standing.
+              Each calendar month is a <span className="text-white font-medium">Season</span>. The same Bayesian formula applies — but only to GPs played within that month, and with a smaller prior of <span className="text-white font-medium">{config.season_prior} phantom races</span> instead of {prior}. Ratings converge faster so a great week matters more. Resetting every month gives everyone a fresh shot regardless of their all-time standing.
             </p>
             <div className="space-y-2">
               {[
@@ -148,7 +182,7 @@ export default function RankingInfoModal({ onClose }: { onClose: () => void }) {
               ))}
             </div>
           </section>
-
+          </>)}
         </div>
       </motion.div>
     </motion.div>

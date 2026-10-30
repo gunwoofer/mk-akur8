@@ -1,54 +1,20 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase-server";
 import {
-  toYearMonth, monthName, daysInMonth, daysLeft,
-  computeRatings, computeSeasonWins, SEASON_PRIOR,
-  type MatchRow, type ResultRow, type PlayerRow,
+  currentYearMonth, monthName, daysInMonth, daysLeft,
+  loadSeasonData, seasonStandings, computeSeasonWins, rankKey, toSeasonPlayer,
+  type SeasonStanding,
 } from "@/lib/season";
-import type { SeasonInfo, SeasonPlayer } from "@/types";
+import { compareRank } from "@/lib/ranking";
+import type { SeasonInfo } from "@/types";
 
 export async function GET() {
-  const supabase = getServerSupabase();
-
-  const [{ data: matchRows }, { data: resultRows }, { data: playerRows }] = await Promise.all([
-    supabase.from("matches").select("id, played_at").order("played_at", { ascending: true }),
-    supabase.from("race_results").select("match_id, player_id, position"),
-    supabase.from("players").select("id, name, character_avatar, avatar_url, rating"),
-  ]);
-
-  const matches = (matchRows ?? []) as MatchRow[];
-  const results = (resultRows ?? []) as ResultRow[];
-  const players = (playerRows ?? []) as PlayerRow[];
-
-  const byMonth = new Map<string, string[]>();
-  for (const m of matches) {
-    const ym = toYearMonth(m.played_at);
-    const arr = byMonth.get(ym) ?? [];
-    arr.push(m.id);
-    byMonth.set(ym, arr);
-  }
-
-  const sortedMonths = [...byMonth.keys()].sort();
-  const nowYM = toYearMonth(new Date().toISOString());
-  const hasGames = byMonth.has(nowYM);
-
-  if (sortedMonths.length === 0) {
-    const season_info: SeasonInfo = {
-      season_number: 1,
-      year_month: nowYM,
-      month_name: monthName(nowYM),
-      days_left: daysLeft(nowYM),
-      days_total: daysInMonth(nowYM),
-      has_games: false,
-    };
-    return NextResponse.json({ season_info, ranking: [] });
-  }
-
-  const currentSeasonNumber = sortedMonths.indexOf(nowYM) + 1;
-  const seasonNumber = hasGames ? currentSeasonNumber : sortedMonths.length + 1;
+  const data = await loadSeasonData(getServerSupabase());
+  const nowYM = currentYearMonth();
+  const hasGames = data.byMonth.has(nowYM);
 
   const season_info: SeasonInfo = {
-    season_number: seasonNumber,
+    season_number: hasGames ? data.sortedMonths.indexOf(nowYM) + 1 : data.sortedMonths.length + 1,
     year_month: nowYM,
     month_name: monthName(nowYM),
     days_left: daysLeft(nowYM),
@@ -56,41 +22,18 @@ export async function GET() {
     has_games: hasGames,
   };
 
-  const seasonWins = computeSeasonWins(sortedMonths, byMonth, results, players, nowYM);
+  const seasonWins = computeSeasonWins(data, nowYM);
+  const standings = seasonStandings(data.byMonth.get(nowYM) ?? [], data);
 
-  const currentMatchIds = byMonth.get(nowYM) ?? [];
-  const currentRatings = computeRatings(currentMatchIds, results);
+  // Past season winners stay on the board even before they play this month.
+  const playing = new Set(standings.map((s) => s.player.id));
+  const idleWinners: SeasonStanding[] = data.players
+    .filter((p) => !playing.has(p.id) && (seasonWins.get(p.id) ?? 0) > 0)
+    .map((player) => ({ player, points: 0, gp: 0, p1: 0, rating: 0 }));
 
-  const playerMap = new Map(players.map((p) => [p.id, p]));
-  const ranking: SeasonPlayer[] = [...currentRatings.entries()]
-    .flatMap(([pid, { points, gp }]): SeasonPlayer[] => {
-      const p = playerMap.get(pid);
-      if (!p) return [];
-      return [{
-        player_id: pid,
-        name: p.name,
-        character_avatar: p.character_avatar,
-        avatar_url: p.avatar_url ?? null,
-        season_rating: points / (SEASON_PRIOR + gp),
-        season_gp: gp,
-        season_wins: seasonWins.get(pid) ?? 0,
-      }];
-    })
-    .sort((a, b) => b.season_rating - a.season_rating || a.name.localeCompare(b.name));
-
-  for (const p of players) {
-    if (!currentRatings.has(p.id) && (seasonWins.get(p.id) ?? 0) > 0) {
-      ranking.push({
-        player_id: p.id,
-        name: p.name,
-        character_avatar: p.character_avatar,
-        avatar_url: p.avatar_url,
-        season_rating: 0,
-        season_gp: 0,
-        season_wins: seasonWins.get(p.id) ?? 0,
-      });
-    }
-  }
+  const ranking = [...standings, ...idleWinners]
+    .sort((a, b) => compareRank(rankKey(a), rankKey(b)))
+    .map((s) => toSeasonPlayer(s, seasonWins));
 
   return NextResponse.json({ season_info, ranking });
 }
