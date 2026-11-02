@@ -204,7 +204,7 @@ export default function ResultsTab() {
                 <AvatarDisplay avatarUrl={p.avatar_url} characterAvatar={p.character_avatar} imgClassName="w-8 h-8" emojiClassName="text-2xl" />
                 <div className="flex-1">
                   <p className="text-white font-semibold text-sm">{p.name}</p>
-                  <p className="text-gray-500 text-xs">{p.gp_played} GPs</p>
+                  <p className="text-gray-500 text-xs">{p.gp_played} GPs{p.provisional ? " · provisional" : ""}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <p className="text-[#00d4ff] font-bold tabular-nums">{formatPlayerRating(p)}</p>

@@ -83,3 +83,6 @@ end;
 $$;
 
 revoke execute on function score_gp(uuid) from public, anon, authenticated;
+
+-- Global Elo: fewer GPs than this = provisional (listed last, marked PROV).
+alter table scoring_settings add column global_min_gp int not null default 10;

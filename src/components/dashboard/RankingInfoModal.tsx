@@ -84,6 +84,9 @@ export default function RankingInfoModal({ onClose }: { onClose: () => void }) {
               <p className="text-gray-400 text-sm">
                 The global ranking is an <span className="text-white font-medium">Elo rating that never resets</span>. Everyone starts at <span className="text-white font-medium">{config.season_elo_start}</span> on their first GP, and every GP since then moves it with the same duel formula as the seasons below: beat stronger players to climb, lose to weaker ones and you drop. Only the order between humans counts — bots are ignored.
               </p>
+              <p className="text-gray-400 text-sm mt-3">
+                With few GPs an Elo has barely moved from the start, so it says little about someone&apos;s level: players with fewer than <span className="text-white font-medium">{config.global_min_gp} GPs</span> are marked <span className="text-white font-medium">PROV</span> (provisional) and listed after everyone else until they reach it.
+              </p>
             </section>
           ) : (
           <>

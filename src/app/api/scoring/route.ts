@@ -8,7 +8,7 @@ export async function GET() {
   const [{ data: points, error: pointsError }, { data: settings, error: settingsError }] = await Promise.all([
     supabase.from("position_points").select("position, points").order("position"),
     supabase.from("scoring_settings")
-      .select("global_prior, season_prior, season_elo_from, season_elo_start, season_elo_k, season_elo_scale, season_min_gp, global_elo_from")
+      .select("global_prior, season_prior, season_elo_from, season_elo_start, season_elo_k, season_elo_scale, season_min_gp, global_elo_from, global_min_gp")
       .single(),
   ]);
 
