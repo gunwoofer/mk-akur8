@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
 import type { SeasonSummary, SeasonPlayer } from "@/types";
 import AvatarDisplay from "@/components/AvatarDisplay";
+import { formatSeasonRating } from "@/lib/format";
 
 function medalColor(rank: number) {
   if (rank === 1) return "text-yellow-400";
@@ -185,10 +186,10 @@ export default function SeasonHistoryModal({ onClose }: Props) {
                           />
                           <div className="flex-1 min-w-0">
                             <p className="text-white font-bold text-base italic truncate">{p.name.toUpperCase()}</p>
-                            <p className="text-gray-600 text-xs">{p.season_gp} GPs</p>
+                            <p className="text-gray-600 text-xs">{p.season_gp} GPs{p.provisional ? " · provisional" : ""}</p>
                           </div>
                           <p className="text-[#00d4ff] font-black text-xl italic tabular-nums">
-                            {p.season_rating.toFixed(2)}
+                            {formatSeasonRating(p.season_rating, p.season_kind)}
                           </p>
                         </div>
                       );

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { Player, HistoryEntry, SeasonSummary, SeasonPlayer } from "@/types";
 import AvatarDisplay from "@/components/AvatarDisplay";
+import { formatSeasonRating } from "@/lib/format";
 
 function TrophyBadge({ wins }: { wins: number }) {
   if (wins === 0) return null;
@@ -288,9 +289,9 @@ export default function ResultsTab() {
                   <AvatarDisplay avatarUrl={p.avatar_url} characterAvatar={p.character_avatar} imgClassName="w-8 h-8" emojiClassName="text-2xl" />
                   <div className="flex-1">
                     <p className="text-white font-semibold text-sm">{p.name}</p>
-                    <p className="text-gray-500 text-xs">{p.season_gp} GPs</p>
+                    <p className="text-gray-500 text-xs">{p.season_gp} GPs{p.provisional ? " · provisional" : ""}</p>
                   </div>
-                  <p className="text-[#00d4ff] font-bold tabular-nums">{p.season_rating.toFixed(2)}</p>
+                  <p className="text-[#00d4ff] font-bold tabular-nums">{formatSeasonRating(p.season_rating, p.season_kind)}</p>
                 </div>
               ))
             )}

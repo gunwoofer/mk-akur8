@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import type { SeasonPoint, SeasonRecord } from "@/types";
+import type { SeasonKind, SeasonPoint, SeasonRecord } from "@/types";
+import { formatSeasonRating } from "@/lib/format";
 
 // Chart tokens on the modal's dark surface. Single series → no legend; the card title names it.
 const SURFACE = "#101016";
@@ -24,6 +25,17 @@ function useWidth<T extends HTMLElement>() {
     return () => window.removeEventListener("resize", update);
   }, []);
   return [ref, width] as const;
+}
+
+// Elo values sit far from zero: frame the range actually reached, on round 25/50/100 steps.
+function eloScale(min: number, max: number): { bottom: number; top: number; ticks: number[] } {
+  const span = Math.max(40, max - min);
+  const step = span <= 80 ? 20 : span <= 200 ? 50 : 100;
+  const bottom = Math.floor((min - step / 2) / step) * step;
+  const top = Math.ceil((max + step / 2) / step) * step;
+  const ticks: number[] = [];
+  for (let t = bottom; t <= top; t += step) ticks.push(t);
+  return { bottom, top, ticks };
 }
 
 function niceScale(max: number): { top: number; ticks: number[] } {
@@ -61,23 +73,35 @@ function pointerX(e: React.MouseEvent | React.TouchEvent, el: Element) {
 
 /* ── Season progression: season rating after each GP this month ─────────── */
 
-export function SeasonLineChart({ series, height = 180 }: { series: SeasonPoint[]; height?: number }) {
+export function SeasonLineChart({
+  series: played, kind, start, height = 180,
+}: { series: SeasonPoint[]; kind: SeasonKind; start: number; height?: number }) {
   const [ref, width] = useWidth<HTMLDivElement>();
   const [hover, setHover] = useState<number | null>(null);
+
+  // Elo seasons begin at the starting value: draw it as point 0 so the climb (or fall) shows.
+  const series: (SeasonPoint & { start?: boolean })[] =
+    kind === "elo" && played.length > 0
+      ? [{ played_at: played[0].played_at, rating: start, position: 0, start: true }, ...played]
+      : played;
+  const fmt = (v: number) => formatSeasonRating(v, kind);
 
   if (series.length === 0) {
     return <p className="text-sm text-center py-10" style={{ color: AXIS_TEXT }}>No GP played this season yet.</p>;
   }
 
-  const pad = { top: 14, right: 44, bottom: 24, left: 30 };
+  const pad = { top: 14, right: 44, bottom: 24, left: kind === "elo" ? 40 : 30 };
   const innerW = Math.max(0, width - pad.left - pad.right);
   const innerH = height - pad.top - pad.bottom;
-  const { top, ticks } = niceScale(Math.max(...series.map((p) => p.rating)));
+  const values = series.map((p) => p.rating);
+  const { bottom, top, ticks } = kind === "elo"
+    ? eloScale(Math.min(...values), Math.max(...values))
+    : { bottom: 0, ...niceScale(Math.max(...values)) };
   const x = (i: number) => pad.left + (series.length === 1 ? innerW / 2 : (i / (series.length - 1)) * innerW);
-  const y = (v: number) => pad.top + innerH - (v / top) * innerH;
+  const y = (v: number) => pad.top + innerH - ((v - bottom) / (top - bottom)) * innerH;
 
   const line = series.map((p, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(p.rating).toFixed(1)}`).join(" ");
-  const area = `${line} L${x(series.length - 1).toFixed(1)},${y(0)} L${x(0).toFixed(1)},${y(0)} Z`;
+  const area = `${line} L${x(series.length - 1).toFixed(1)},${y(bottom)} L${x(0).toFixed(1)},${y(bottom)} Z`;
   const last = series.length - 1;
 
   const onMove = (e: React.MouseEvent | React.TouchEvent) => {
@@ -100,7 +124,7 @@ export function SeasonLineChart({ series, height = 180 }: { series: SeasonPoint[
           onTouchMove={onMove}
           onMouseLeave={() => setHover(null)}
           role="img"
-          aria-label={`Season rating after each of ${series.length} GPs, now ${series[last].rating.toFixed(2)}`}
+          aria-label={`Season rating after each of ${played.length} GPs, now ${fmt(series[last].rating)}`}
         >
           {ticks.map((t) => (
             <g key={t}>
@@ -134,7 +158,7 @@ export function SeasonLineChart({ series, height = 180 }: { series: SeasonPoint[
 
           <circle cx={x(last)} cy={y(series[last].rating)} r={4} fill={SERIES} stroke={SURFACE} strokeWidth={2} />
           <text x={x(last) + 8} y={y(series[last].rating) + 4} fontSize={12} fontWeight={600} fill={TEXT}>
-            {series[last].rating.toFixed(2)}
+            {fmt(series[last].rating)}
           </text>
 
           {h && hover !== null && hover !== last && (
@@ -148,19 +172,23 @@ export function SeasonLineChart({ series, height = 180 }: { series: SeasonPoint[
           x={x(hover)}
           y={y(h.rating)}
           width={width}
-          lines={[
-            [h.rating.toFixed(2), `rating · GP ${hover + 1}`],
-            [`P${h.position}`, `on ${shortDate(h.played_at)}`],
-          ]}
+          lines={h.start
+            ? [[fmt(h.rating), "season start"]]
+            : [
+                [fmt(h.rating), `rating · GP ${series[0].start ? hover : hover + 1}`],
+                [`P${h.position}`, `on ${shortDate(h.played_at)}`],
+              ]}
         />
       )}
     </div>
   );
 }
 
-/* ── Seasonal ratings: final (or current) rating for each season played ── */
+/* ── Finish position by season ────────────────────────────────────────────
+   Season scores aren't comparable across months (average-based until Oct 2026,
+   Elo after), but the finishing position is. #1 sits at the top. */
 
-export function SeasonColumnChart({ seasons, height = 200 }: { seasons: SeasonRecord[]; height?: number }) {
+export function SeasonRankChart({ seasons, height = 200 }: { seasons: SeasonRecord[]; height?: number }) {
   const [ref, width] = useWidth<HTMLDivElement>();
   const [hover, setHover] = useState<number | null>(null);
 
@@ -169,24 +197,15 @@ export function SeasonColumnChart({ seasons, height = 200 }: { seasons: SeasonRe
     return <p className="text-sm text-center py-10" style={{ color: AXIS_TEXT }}>No season played yet.</p>;
   }
 
-  const pad = { top: 34, right: 8, bottom: 36, left: 30 };
+  const pad = { top: 26, right: 12, bottom: 36, left: 30 };
   const innerW = Math.max(0, width - pad.left - pad.right);
   const innerH = height - pad.top - pad.bottom;
-  const { top, ticks } = niceScale(Math.max(...shown.map((s) => s.rating)));
+  const worst = Math.max(3, ...shown.map((s) => s.rank));
   const band = innerW / shown.length;
-  const barW = Math.min(24, band * 0.6);
   const cx = (i: number) => pad.left + band * (i + 0.5);
-  const y = (v: number) => pad.top + innerH - (v / top) * innerH;
-  const showCapLabels = band >= 34;
-
-  // Column: 4px rounded data-end, square at the baseline.
-  const column = (i: number, v: number) => {
-    const x0 = cx(i) - barW / 2;
-    const y0 = y(v);
-    const base = y(0);
-    const r = Math.min(4, (base - y0) / 2, barW / 2);
-    return `M${x0},${base} L${x0},${y0 + r} Q${x0},${y0} ${x0 + r},${y0} L${x0 + barW - r},${y0} Q${x0 + barW},${y0} ${x0 + barW},${y0 + r} L${x0 + barW},${base} Z`;
-  };
+  const y = (rank: number) => pad.top + ((rank - 1) / (worst - 1)) * innerH;
+  const ticks = worst <= 6 ? Array.from({ length: worst }, (_, i) => i + 1) : [1, Math.ceil(worst / 2), worst];
+  const line = shown.map((s, i) => `${i === 0 ? "M" : "L"}${cx(i).toFixed(1)},${y(s.rank).toFixed(1)}`).join(" ");
 
   const onMove = (e: React.MouseEvent | React.TouchEvent) => {
     if (band <= 0) return;
@@ -207,37 +226,46 @@ export function SeasonColumnChart({ seasons, height = 200 }: { seasons: SeasonRe
           onTouchMove={onMove}
           onMouseLeave={() => setHover(null)}
           role="img"
-          aria-label={`Season rating for ${shown.length} seasons`}
+          aria-label={`Finishing position in ${shown.length} seasons`}
         >
           {ticks.map((t) => (
             <g key={t}>
               <line x1={pad.left} x2={width - pad.right} y1={y(t)} y2={y(t)} stroke={GRID} strokeWidth={1} />
-              <text x={pad.left - 8} y={y(t) + 4} textAnchor="end" fontSize={11} fill={AXIS_TEXT}>{t}</text>
+              <text x={pad.left - 8} y={y(t) + 4} textAnchor="end" fontSize={11} fill={AXIS_TEXT}>#{t}</text>
             </g>
           ))}
+          {shown.length > 1 && (
+            <motion.path
+              d={line}
+              fill="none"
+              stroke={SERIES}
+              strokeWidth={2}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 0.9, ease: "easeOut" }}
+            />
+          )}
+          {hover !== null && (
+            <line x1={cx(hover)} x2={cx(hover)} y1={pad.top} y2={pad.top + innerH} stroke={AXIS_TEXT} strokeWidth={1} />
+          )}
           {shown.map((s, i) => (
             <g key={s.year_month}>
-              <motion.path
-                d={column(i, s.rating)}
-                fill={SERIES}
-                fillOpacity={s.is_current ? 0.45 : hover === i ? 1 : 0.9}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: i * 0.06, duration: 0.4 }}
+              <circle
+                cx={cx(i)}
+                cy={y(s.rank)}
+                r={s.won ? 6 : 4}
+                fill={s.is_current ? SURFACE : SERIES}
+                stroke={s.is_current ? SERIES : SURFACE}
+                strokeWidth={2}
               />
-              {s.won && (
-                <text x={cx(i)} y={y(s.rating) - (showCapLabels ? 20 : 6)} textAnchor="middle" fontSize={14}>🏆</text>
-              )}
-              {showCapLabels && (
-                <text x={cx(i)} y={y(s.rating) - 6} textAnchor="middle" fontSize={11} fontWeight={600} fill={TEXT}>
-                  {s.rating.toFixed(1)}
-                </text>
-              )}
+              {s.won && <text x={cx(i)} y={y(s.rank) - 10} textAnchor="middle" fontSize={13}>🏆</text>}
               <text x={cx(i)} y={height - 20} textAnchor="middle" fontSize={11} fill={TEXT}>
                 {s.month_name.slice(0, 3)}
               </text>
               <text x={cx(i)} y={height - 6} textAnchor="middle" fontSize={10} fill={AXIS_TEXT}>
-                {s.is_current ? "now" : `#${s.rank}`}
+                {s.is_current ? "now" : `of ${s.players}`}
               </text>
             </g>
           ))}
@@ -247,11 +275,11 @@ export function SeasonColumnChart({ seasons, height = 200 }: { seasons: SeasonRe
       {h && hover !== null && (
         <Tooltip
           x={cx(hover)}
-          y={y(h.rating)}
+          y={y(h.rank)}
           width={width}
           lines={[
-            [h.rating.toFixed(2), `rating · ${h.month_name}`],
-            [h.is_current ? `#${h.rank} so far` : h.won ? "🏆 Won" : `#${h.rank}`, `· ${h.gp} GPs`],
+            [`#${h.rank} of ${h.players}`, `${h.month_name}${h.is_current ? " (so far)" : h.won ? " 🏆" : ""}`],
+            [formatSeasonRating(h.rating, h.kind), `${h.kind === "elo" ? "Elo" : "rating"} · ${h.gp} GPs`],
           ]}
         />
       )}

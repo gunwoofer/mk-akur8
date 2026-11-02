@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase-server";
-import { currentYearMonth, fullMonthName, loadSeasonData, seasonStandings } from "@/lib/season";
+import { currentYearMonth, fullMonthName, loadSeasonData, seasonStandings, seasonKind } from "@/lib/season";
 import type { SeasonSummary } from "@/types";
 
 export async function GET() {
@@ -17,6 +17,7 @@ export async function GET() {
       month_name: fullMonthName(ym),
       gp_count: data.gpCounts.get(ym) ?? 0,
       is_current: ym === nowYM,
+      kind: seasonKind(ym, data.scoring),
       winner: winner
         ? { player_id: winner.id, name: winner.name, character_avatar: winner.character_avatar, avatar_url: winner.avatar_url }
         : null,

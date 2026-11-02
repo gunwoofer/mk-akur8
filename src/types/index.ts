@@ -56,12 +56,21 @@ export interface SeasonRecord {
   rank: number;
   won: boolean;
   is_current: boolean;
+  kind: SeasonKind;
+  players: number;
 }
 
 export interface PlayerStats {
   player: Player;
   season_wins: number;
-  current_season: { year_month: string; month_name: string; stats: StatBlock; series: SeasonPoint[] };
+  current_season: {
+    year_month: string;
+    month_name: string;
+    kind: SeasonKind;
+    elo_start: number;
+    stats: StatBlock;
+    series: SeasonPoint[];
+  };
   global: StatBlock;
   seasons: SeasonRecord[];        // oldest first, seasons the player took part in
 }
@@ -84,6 +93,10 @@ export interface SubmitMatchPayload {
   results: { player_id: string; position: number }[];
 }
 
+// "average": points / (season_prior + GPs), seasons up to Oct 2026.
+// "elo": pairwise Elo reset each month, from season_elo_from on.
+export type SeasonKind = "average" | "elo";
+
 export interface SeasonInfo {
   season_number: number;
   year_month: string;
@@ -91,6 +104,9 @@ export interface SeasonInfo {
   days_left: number;
   days_total: number;
   has_games: boolean;
+  kind: SeasonKind;
+  elo_start: number;
+  min_gp: number;
 }
 
 export interface SeasonPlayer {
@@ -101,6 +117,8 @@ export interface SeasonPlayer {
   season_rating: number;
   season_gp: number;
   season_wins: number;
+  season_kind: SeasonKind;
+  provisional: boolean;     // Elo seasons: fewer GPs than min_gp, can't win the month yet
 }
 
 export interface BestStreak {
@@ -120,6 +138,7 @@ export interface SeasonSummary {
   month_name: string;
   gp_count: number;
   is_current: boolean;
+  kind: SeasonKind;
   winner: {
     player_id: string;
     name: string;
@@ -139,4 +158,9 @@ export interface ScoringConfig {
   points: { position: number; points: number }[];
   global_prior: number;
   season_prior: number;
+  season_elo_from: string;
+  season_elo_start: number;
+  season_elo_k: number;
+  season_elo_scale: number;
+  season_min_gp: number;
 }

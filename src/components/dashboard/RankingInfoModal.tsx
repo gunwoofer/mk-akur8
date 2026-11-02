@@ -33,6 +33,9 @@ export default function RankingInfoModal({ onClose }: { onClose: () => void }) {
   const ptsAt = (position: number) => config?.points.find((r) => r.position === position)?.points ?? 0;
   const rating = (points: number, gps: number) => (points / (prior + gps)).toFixed(2);
   const p1 = ptsAt(1);
+  // Elo gained for beating someone `gap` points above you in a 1-vs-1 GP.
+  const eloGain = (gap: number) =>
+    config ? Math.round(config.season_elo_k * (1 - 1 / (1 + Math.pow(10, gap / config.season_elo_scale)))) : 0;
   const p3 = ptsAt(3);
 
   return (
@@ -164,11 +167,31 @@ export default function RankingInfoModal({ onClose }: { onClose: () => void }) {
               Seasons
             </p>
             <p className="text-gray-400 text-sm mb-4">
-              Each calendar month is a <span className="text-white font-medium">Season</span>. The same Bayesian formula applies — but only to GPs played within that month, and with a smaller prior of <span className="text-white font-medium">{config.season_prior} phantom races</span> instead of {prior}. Ratings converge faster so a great week matters more. Resetting every month gives everyone a fresh shot regardless of their all-time standing.
+              Each calendar month is a <span className="text-white font-medium">Season</span>, scored with an <span className="text-white font-medium">Elo rating</span> like in chess — independent of the global ranking. On the 1st everyone starts at <span className="text-white font-medium">{config.season_elo_start}</span>. In every GP, each pair of players is a duel: finishing ahead wins it, a shared position is a draw. Beating stronger players earns a lot, beating weaker ones earns little.
             </p>
+            <div className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl px-5 py-4 font-mono text-center mb-4">
+              <p className="text-white text-base">
+                change = <span className="text-[#00d4ff]">{config.season_elo_k}</span> × Σ(result − expected) / opponents
+              </p>
+              <p className="text-gray-500 text-xs mt-2">
+                expected = 1 / (1 + 10^((their Elo − your Elo) / {config.season_elo_scale}))
+              </p>
+            </div>
+            <div className="space-y-2 mb-4">
+              {[
+                { label: "Win a duel against an equal player", value: eloGain(0) },
+                { label: "Beat someone 200 Elo above you", value: eloGain(200) },
+                { label: "Beat someone 200 Elo below you", value: eloGain(-200) },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex items-center justify-between bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-4 py-2.5">
+                  <p className="text-white text-xs font-medium">{label} <span className="text-gray-600">(1 vs 1)</span></p>
+                  <span className="text-[#00d4ff] font-black text-lg tabular-nums shrink-0">+{value}</span>
+                </div>
+              ))}
+            </div>
             <div className="space-y-2">
               {[
-                { icon: "🏆", label: "Season winner", desc: "The player with the highest season rating at month end. Ties broken by number of P1 finishes, then global rating." },
+                { icon: "🏆", label: "Season winner", desc: `The highest Elo at month end among players with at least ${config.season_min_gp} GPs that month. Players below that are marked PROV (provisional). Ties broken by number of P1 finishes.` },
                 { icon: "Season / Global", label: "Toggle", desc: "Switch the leaderboard between the current season ranking and the all-time global ranking." },
                 { icon: "Seasons won", label: "Column", desc: "Total number of monthly seasons each player has won. Shown on every row — it survives a poor current season." },
               ].map(({ icon, label, desc }) => (

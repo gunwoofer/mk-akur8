@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getSupabase } from "@/lib/supabase";
 import { api } from "@/lib/api";
 import { compareRank } from "@/lib/ranking";
-import type { Player, HistoryEntry, SeasonInfo, SeasonPlayer, BestStreak } from "@/types";
+import type { Player, HistoryEntry, SeasonInfo, SeasonKind, SeasonPlayer, BestStreak } from "@/types";
 
 export interface RankedPlayer extends Player {
   rankDelta: number;
@@ -36,6 +36,8 @@ export interface RecapEntry {
   // Season rating — what people care about after a GP. null before = first GP of the season.
   ratingBefore: number | null;
   ratingAfter: number;
+  kind: SeasonKind;
+  seasonStart: number;      // Elo starting value — the "before" of a first GP of the month
 }
 
 export interface OvertakePlayer {
@@ -200,6 +202,8 @@ export function useLeaderboard() {
             avatar_url: r.avatar_url,
             ratingBefore: frozenSeasonRatingsRef.current[r.player_id] ?? null,
             ratingAfter: seasonData?.ranking.find((p) => p.player_id === r.player_id)?.season_rating ?? 0,
+            kind: seasonData?.season_info.kind ?? "average",
+            seasonStart: seasonData?.season_info.kind === "elo" ? seasonData.season_info.elo_start : 0,
           }));
           setGpRecap((prev) => prev ?? recapEntries);
           setOvertakes(findOvertakes(frozenSeasonBaselineRef.current, seasonData?.ranking ?? []));

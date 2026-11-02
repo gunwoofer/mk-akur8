@@ -3,7 +3,7 @@ import { getServerSupabase } from "@/lib/supabase-server";
 import { fetchAll } from "@/lib/fetch-all";
 import { rankedPlayers } from "@/lib/players";
 import {
-  currentYearMonth, monthName, loadSeasonData, seasonStandings, computeSeasonWins, type SeasonData,
+  currentYearMonth, monthName, loadSeasonData, seasonStandings, computeSeasonWins, seasonKind, type SeasonData,
 } from "@/lib/season";
 import type { Player, PlayerStats, SeasonRecord, StatBlock } from "@/types";
 
@@ -91,6 +91,9 @@ export async function GET(
   }
 
   const nowYM = currentYearMonth();
+  const kind = seasonKind(nowYM, seasonData.scoring);
+  // Before a player's first GP of the month, their season score is the starting value.
+  const seasonStart = kind === "elo" ? seasonData.scoring.eloStart : 0;
   const seasonRows = rows.filter((r) => r.season === nowYM);
   const seasonStandingsNow = seasonStandings(nowYM, seasonData).filter((s) => !s.player.archived_at);
   const seasonRank = seasonStandingsNow.findIndex((s) => s.player.id === id);
@@ -106,10 +109,12 @@ export async function GET(
     current_season: {
       year_month: nowYM,
       month_name: monthName(nowYM),
+      kind,
+      elo_start: seasonData.scoring.eloStart,
       stats: statBlock(
         seasonRows,
-        lastSeason?.season_rating ?? 0,
-        lastSeason ? lastSeason.season_rating - (prevSeason?.season_rating ?? 0) : null,
+        lastSeason?.season_rating ?? seasonStart,
+        lastSeason ? lastSeason.season_rating - (prevSeason?.season_rating ?? seasonStart) : null,
         seasonRank >= 0 ? seasonRank + 1 : null,
         seasonStandingsNow.length,
       ),
@@ -134,6 +139,8 @@ export async function GET(
         rank: idx + 1,
         won: idx === 0 && ym < nowYM,
         is_current: ym === nowYM,
+        kind: standings[idx].kind,
+        players: standings.length,
       }];
     }),
   };

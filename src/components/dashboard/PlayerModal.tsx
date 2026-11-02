@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { PlayerStats, StatBlock } from "@/types";
+import type { PlayerStats, SeasonKind, StatBlock } from "@/types";
 import AvatarDisplay from "@/components/AvatarDisplay";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { SeasonLineChart, SeasonColumnChart } from "./PlayerCharts";
+import { SeasonLineChart, SeasonRankChart } from "./PlayerCharts";
+import { formatSeasonRating, formatSeasonDelta, deltaThreshold } from "@/lib/format";
 
 type View = "season" | "global";
 
@@ -49,6 +50,8 @@ export default function PlayerModal({ stats, playerName, streak, initialView, on
   const player = stats?.player;
   const block: StatBlock | null = stats ? (effectiveView === "season" ? stats.current_season.stats : stats.global) : null;
   const ring = (block?.rank && RANK_RING[block.rank]) || MK_RED;
+  // Global keeps the 0–15 average format; the season uses its own kind (Elo from Nov 2026).
+  const kind: SeasonKind = effectiveView === "season" && stats ? stats.current_season.kind : "average";
 
   return (
     <motion.div
@@ -157,13 +160,15 @@ export default function PlayerModal({ stats, playerName, streak, initialView, on
                 <div className="flex items-end justify-between mb-5">
                   <div>
                     <p className="text-[#9ca3af] text-xs uppercase tracking-widest mb-1">
-                      {effectiveView === "season" ? `${stats.current_season.month_name} rating` : "Global rating"}
+                      {effectiveView === "season"
+                        ? `${stats.current_season.month_name} ${kind === "elo" ? "Elo" : "rating"}`
+                        : "Global rating"}
                     </p>
                     <div className="flex items-end">
                       <p className={`font-racing text-outline tabular-nums leading-none ${mobile ? "text-5xl" : "text-6xl"}`} style={{ color: MK_YELLOW }}>
-                        {block.rating.toFixed(2)}
+                        {formatSeasonRating(block.rating, kind)}
                       </p>
-                      <Delta value={block.rating_delta} />
+                      <Delta value={block.rating_delta} kind={kind} />
                     </div>
                   </div>
                   {block.rank !== null && (
@@ -198,16 +203,25 @@ export default function PlayerModal({ stats, playerName, streak, initialView, on
                 {/* Chart */}
                 <div className="rounded-xl border border-white/10 bg-[#101016] px-4 pt-3 pb-2 mb-5">
                   <p className="text-white text-sm font-semibold">
-                    {effectiveView === "season" ? "Season rating after each GP" : "Rating by season"}
+                    {effectiveView === "season"
+                      ? `Season ${kind === "elo" ? "Elo" : "rating"} after each GP`
+                      : "Finishing position by season"}
                   </p>
                   <p className="text-[#9ca3af] text-xs mb-2">
                     {effectiveView === "season"
                       ? `${stats.current_season.month_name} · ${block.gp} GP${block.gp !== 1 ? "s" : ""}`
-                      : "Final rating each month · 🏆 season won"}
+                      : "Where they finished each month · 🏆 season won"}
                   </p>
                   {effectiveView === "season"
-                    ? <SeasonLineChart series={stats.current_season.series} height={mobile ? 160 : 190} />
-                    : <SeasonColumnChart seasons={stats.seasons} height={mobile ? 180 : 210} />}
+                    ? (
+                      <SeasonLineChart
+                        series={stats.current_season.series}
+                        kind={stats.current_season.kind}
+                        start={stats.current_season.elo_start}
+                        height={mobile ? 160 : 190}
+                      />
+                    )
+                    : <SeasonRankChart seasons={stats.seasons} height={mobile ? 180 : 210} />}
                 </div>
 
                 {/* Form */}
@@ -267,8 +281,8 @@ function Tile({ label, value, sub }: { label: string; value: string; sub?: strin
   );
 }
 
-function Delta({ value }: { value: number | null }) {
-  if (value === null || Math.abs(value) < 0.005) return null;
+function Delta({ value, kind }: { value: number | null; kind: SeasonKind }) {
+  if (value === null || Math.abs(value) < deltaThreshold(kind)) return null;
   const up = value > 0;
   return (
     <span
@@ -276,7 +290,7 @@ function Delta({ value }: { value: number | null }) {
       style={{ color: up ? "#4ade80" : "#f87171", background: up ? "rgba(74,222,128,0.12)" : "rgba(248,113,113,0.12)" }}
       title="Change from the last GP"
     >
-      {up ? "▲" : "▼"} {Math.abs(value).toFixed(2)}
+      {up ? "▲" : "▼"} {formatSeasonDelta(value, kind).slice(1)}
     </span>
   );
 }

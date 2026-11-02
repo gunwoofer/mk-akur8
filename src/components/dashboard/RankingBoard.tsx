@@ -2,6 +2,8 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import AvatarDisplay from "@/components/AvatarDisplay";
+import { formatSeasonRating } from "@/lib/format";
+import type { SeasonKind } from "@/types";
 
 export interface BoardEntry {
   id: string;
@@ -13,6 +15,21 @@ export interface BoardEntry {
   rankDelta: number;
   streak?: number;
   wins: number;
+  kind?: SeasonKind;        // season entries; undefined = global rating
+  provisional?: boolean;
+}
+
+const formatRating = (e: BoardEntry) => (e.kind ? formatSeasonRating(e.rating, e.kind) : e.rating.toFixed(2));
+
+function ProvisionalTag({ small }: { small?: boolean }) {
+  return (
+    <span
+      className={`shrink-0 rounded font-semibold uppercase tracking-wider text-[#cbd5e1] border border-white/20 bg-black/50 ${small ? "ml-1 px-1 text-[9px]" : "ml-2 px-1.5 text-[10px]"}`}
+      title="Fewer GPs than needed to win the month"
+    >
+      Prov
+    </span>
+  );
 }
 
 const MK_RED = "#e60012";
@@ -77,13 +94,14 @@ function PodiumSpot({ entry, place, onOpen, mobile }: { entry: BoardEntry; place
         <p className={`font-racing text-outline text-white uppercase truncate ${mobile ? (place === 1 ? "text-base" : "text-sm") : place === 1 ? "text-2xl" : "text-xl"}`}>
           {entry.name}
         </p>
+        {entry.provisional && <ProvisionalTag small={mobile} />}
         {entry.streak !== undefined && (
           <span className={`shrink-0 text-orange-400 font-bold leading-none ${mobile ? "ml-1 text-xs" : "ml-2 text-base"}`}>🔥{entry.streak}</span>
         )}
       </div>
       <div className="flex items-center mb-2">
         <p className={`font-racing text-outline tabular-nums ${mobile ? (place === 1 ? "text-xl" : "text-lg") : place === 1 ? "text-3xl" : "text-2xl"}`} style={{ color: MK_YELLOW }}>
-          {entry.rating.toFixed(2)}
+          {formatRating(entry)}
         </p>
         <span className={mobile ? "ml-1" : "ml-2"}><Trend delta={entry.rankDelta} /></span>
         {entry.wins > 0 && <span className={mobile ? "ml-1" : "ml-2"}><TrophyBadge wins={entry.wins} compact={mobile} /></span>}
@@ -162,6 +180,7 @@ function MobileBoardRow({ entry, rank, onOpen }: { entry: BoardEntry; rank: numb
           <p className="font-racing text-outline text-white text-base uppercase truncate leading-tight mr-1">
             {entry.name}
           </p>
+          {entry.provisional && <ProvisionalTag small />}
           {entry.streak !== undefined && (
             <span className="shrink-0 text-orange-400 font-bold text-sm leading-none">🔥{entry.streak}</span>
           )}
@@ -173,7 +192,7 @@ function MobileBoardRow({ entry, rank, onOpen }: { entry: BoardEntry; rank: numb
       </div>
       <div className="flex items-center justify-end">
         <p className="font-racing text-outline text-xl tabular-nums" style={{ color: MK_YELLOW }}>
-          {entry.rating.toFixed(2)}
+          {formatRating(entry)}
         </p>
         <span className="ml-1 w-4 text-sm text-center"><Trend delta={entry.rankDelta} /></span>
       </div>
@@ -202,12 +221,13 @@ function BoardRow({ entry, rank, onOpen }: { entry: BoardEntry; rank: number; on
         <p className="font-racing text-outline text-white text-xl uppercase truncate leading-tight mr-2">
           {entry.name}
         </p>
+        {entry.provisional && <ProvisionalTag />}
         {entry.streak !== undefined && (
           <span className="shrink-0 text-orange-400 font-bold text-lg leading-none">🔥{entry.streak}</span>
         )}
       </div>
       <p className="font-racing text-outline text-2xl tabular-nums text-right" style={{ color: MK_YELLOW }}>
-        {entry.rating.toFixed(2)}
+        {formatRating(entry)}
       </p>
       <p className="text-[#cbd5e1] text-sm tabular-nums text-right">{entry.gp}</p>
       <div className="flex justify-end items-center"><Trend delta={entry.rankDelta} /></div>

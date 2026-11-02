@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import AvatarDisplay from "@/components/AvatarDisplay";
 import type { RecapEntry } from "@/hooks/useLeaderboard";
+import { formatSeasonRating, formatSeasonDelta, deltaThreshold } from "@/lib/format";
 
 interface Props {
   entries: RecapEntry[];
@@ -61,12 +62,12 @@ export default function GPRecapOverlay({ entries, onDone }: Props) {
         <div className="space-y-3">
           <AnimatePresence>
             {entries.map((entry, index) => {
-              const isNew = entry.ratingBefore === null;
-              const delta = entry.ratingAfter - (entry.ratingBefore ?? 0);
-              const absDelta = Math.abs(delta);
+              // Elo seasons start everyone at the same value, so a first GP still has a real delta.
+              const isNew = entry.ratingBefore === null && entry.kind !== "elo";
+              const delta = entry.ratingAfter - (entry.ratingBefore ?? entry.seasonStart);
+              const threshold = deltaThreshold(entry.kind);
               const deltaColor =
-                delta > 0.005 ? "text-[#4ade80]" : delta < -0.005 ? "text-[#f87171]" : "text-gray-500";
-              const deltaSign = delta > 0.005 ? "+" : delta < -0.005 ? "−" : "±";
+                delta >= threshold ? "text-[#4ade80]" : delta <= -threshold ? "text-[#f87171]" : "text-gray-500";
               const barWidth = Math.max(4, ((25 - entry.position) / 24) * 100);
 
               return (
@@ -104,10 +105,10 @@ export default function GPRecapOverlay({ entries, onDone }: Props) {
                     />
                   </div>
                   <span className="font-racing text-[#ffd400] text-sm tabular-nums w-12 text-right shrink-0">
-                    {entry.ratingAfter.toFixed(2)}
+                    {formatSeasonRating(entry.ratingAfter, entry.kind)}
                   </span>
                   <span className={`${isNew ? "text-[#ffd400]" : deltaColor} font-black text-sm tabular-nums w-16 text-right shrink-0`}>
-                    {isNew ? "NEW" : `${deltaSign}${absDelta.toFixed(2)}`}
+                    {isNew ? "NEW" : Math.abs(delta) < threshold ? "±0" : formatSeasonDelta(delta, entry.kind)}
                   </span>
                 </motion.div>
               );

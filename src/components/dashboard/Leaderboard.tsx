@@ -50,6 +50,7 @@ export default function Leaderboard() {
     ? seasonPlayers.map((p) => ({
         id: p.player_id, name: p.name, character_avatar: p.character_avatar, avatar_url: p.avatar_url,
         rating: p.season_rating, gp: p.season_gp, rankDelta: p.rankDelta, streak: p.streak, wins: p.season_wins,
+        kind: p.season_kind, provisional: p.provisional,
       }))
     : players.map((p) => ({
         id: p.id, name: p.name, character_avatar: p.character_avatar, avatar_url: p.avatar_url,
@@ -155,6 +156,11 @@ export default function Leaderboard() {
             </button>
           ))}
         </div>
+        {showSeason && seasonInfo?.kind === "elo" && (
+          <p className={`text-[#cbd5e1] text-xs text-outline ${mobile ? "mt-2" : "ml-4"}`}>
+            Season Elo · starts at {seasonInfo.elo_start} · {seasonInfo.min_gp} GPs min to win the month (PROV = not yet)
+          </p>
+        )}
         {isSeason && seasonInfo && !seasonInfo.has_games && (
           <p className={`text-[#cbd5e1] text-xs text-outline ${mobile ? "mt-2" : "ml-4"}`}>No GPs played this month yet — showing global ranking</p>
         )}
