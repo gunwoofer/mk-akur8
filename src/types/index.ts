@@ -9,6 +9,7 @@ export interface Player {
   archived_at?: string | null;
   rating_kind?: SeasonKind;  // "elo" when scoring_settings.global_elo_from is active
   provisional?: boolean;     // global Elo: fewer GPs than global_min_gp
+  required_gp?: number;      // provisional players: GPs needed to be ranked
 }
 
 export interface Match {

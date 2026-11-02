@@ -14,6 +14,20 @@ function TrophyBadge({ wins }: { wins: number }) {
 
 type SubView = "ranking" | "history" | "seasons";
 
+// Same rule as the dashboard: provisional players get no position, under a divider —
+// unless nobody is ranked yet, then it's a single numbered list.
+function rankingRows(players: Player[]): { player: Player; rank: number | null; divider: boolean }[] {
+  const ranked = players.filter((p) => !p.provisional);
+  if (ranked.length === 0 || ranked.length === players.length) {
+    return players.map((player, i) => ({ player, rank: i + 1, divider: false }));
+  }
+  const unranked = players.filter((p) => p.provisional);
+  return [
+    ...ranked.map((player, i) => ({ player, rank: i + 1, divider: false })),
+    ...unranked.map((player, i) => ({ player, rank: null, divider: i === 0 })),
+  ];
+}
+
 const PAGE_SIZE = 5;
 
 export default function ResultsTab() {
@@ -191,25 +205,31 @@ export default function ResultsTab() {
           <div className="space-y-2">
             {players.length === 0 ? (
               <p className="text-gray-600 text-sm text-center py-8">No players yet.</p>
-            ) : players.map((p, i) => (
+            ) : rankingRows(players).map(({ player: p, rank, divider }) => (
+              <div key={p.id}>
+              {divider && (
+                <p className="text-gray-500 text-[10px] font-semibold uppercase tracking-widest pt-3 pb-1">Not ranked yet</p>
+              )}
               <div
-                key={p.id}
-                className="flex items-center gap-3 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-4 py-3"
+                className={`flex items-center gap-3 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-4 py-3 ${rank === null ? "opacity-70" : ""}`}
               >
                 <span className={`font-black text-lg w-6 text-center ${
-                  i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-600" : "text-gray-600"
+                  rank === 1 ? "text-yellow-400" : rank === 2 ? "text-gray-300" : rank === 3 ? "text-amber-600" : "text-gray-600"
                 }`}>
-                  {i + 1}
+                  {rank ?? "–"}
                 </span>
                 <AvatarDisplay avatarUrl={p.avatar_url} characterAvatar={p.character_avatar} imgClassName="w-8 h-8" emojiClassName="text-2xl" />
                 <div className="flex-1">
                   <p className="text-white font-semibold text-sm">{p.name}</p>
-                  <p className="text-gray-500 text-xs">{p.gp_played} GPs{p.provisional ? " · provisional" : ""}</p>
+                  <p className="text-gray-500 text-xs">
+                    {rank === null && p.required_gp ? `${p.gp_played}/${p.required_gp} GPs` : `${p.gp_played} GPs`}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <p className="text-[#00d4ff] font-bold tabular-nums">{formatPlayerRating(p)}</p>
                   <TrophyBadge wins={seasonWins.get(p.id) ?? 0} />
                 </div>
+              </div>
               </div>
             ))}
           </div>

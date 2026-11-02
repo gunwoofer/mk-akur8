@@ -50,12 +50,12 @@ export default function Leaderboard() {
     ? seasonPlayers.map((p) => ({
         id: p.player_id, name: p.name, character_avatar: p.character_avatar, avatar_url: p.avatar_url,
         rating: p.season_rating, gp: p.season_gp, rankDelta: p.rankDelta, streak: p.streak, wins: p.season_wins,
-        kind: p.season_kind, provisional: p.provisional,
+        kind: p.season_kind, provisional: p.provisional, requiredGp: seasonInfo?.min_gp,
       }))
     : players.map((p) => ({
         id: p.id, name: p.name, character_avatar: p.character_avatar, avatar_url: p.avatar_url,
         rating: p.rating, gp: p.gp_played, rankDelta: p.rankDelta, streak: p.streak, wins: p.season_wins,
-        kind: p.rating_kind, provisional: p.provisional,
+        kind: p.rating_kind, provisional: p.provisional, requiredGp: p.required_gp,
       }));
 
   const headerButton = "px-3 py-1.5 rounded-lg border border-white/15 bg-black/50 text-[#e5e7eb] text-xs font-semibold uppercase tracking-wider";
@@ -181,7 +181,12 @@ export default function Leaderboard() {
           </div>
         </div>
       ) : (
-        <RankingBoard entries={entries} onOpen={openPlayer} mobile={mobile} />
+        <RankingBoard
+          entries={entries}
+          onOpen={openPlayer}
+          mobile={mobile}
+          unrankedLabel={showSeason ? "Not eligible yet" : "Not ranked yet"}
+        />
       )}
 
       <AnimatePresence>

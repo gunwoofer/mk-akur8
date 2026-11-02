@@ -17,7 +17,10 @@ export interface BoardEntry {
   wins: number;
   kind?: SeasonKind;        // season entries; undefined = global rating
   provisional?: boolean;
+  requiredGp?: number;      // provisional entries: GPs needed to be ranked
 }
+
+const gpLabel = (e: BoardEntry) => (e.provisional && e.requiredGp ? `${e.gp}/${e.requiredGp}` : String(e.gp));
 
 const formatRating = (e: BoardEntry) => (e.kind ? formatSeasonRating(e.rating, e.kind) : e.rating.toFixed(2));
 
@@ -158,7 +161,7 @@ export function ColumnHeaders({ mobile }: { mobile: boolean }) {
   );
 }
 
-function MobileBoardRow({ entry, rank, onOpen }: { entry: BoardEntry; rank: number; onOpen: (id: string) => void }) {
+function MobileBoardRow({ entry, rank, onOpen }: { entry: BoardEntry; rank: number | null; onOpen: (id: string) => void }) {
   return (
     <motion.div
       layout
@@ -167,26 +170,30 @@ function MobileBoardRow({ entry, rank, onOpen }: { entry: BoardEntry; rank: numb
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
       onClick={() => onOpen(entry.id)}
-      className={`hud-row ${MOBILE_ROW_GRID} px-4 py-2 mb-2 cursor-pointer`}
-      style={{ ["--hud-accent" as string]: MK_RED }}
+      className={`hud-row ${MOBILE_ROW_GRID} px-4 py-2 mb-2 cursor-pointer ${rank === null ? "opacity-75" : ""}`}
+      style={{ ["--hud-accent" as string]: rank === null ? "rgba(255,255,255,0.25)" : MK_RED }}
     >
-      <span className="font-racing text-outline text-white leading-none">
-        <span className="text-2xl tabular-nums">{rank}</span>
-        <span className="text-xs ml-0.5 align-top">{ordinal(rank)}</span>
-      </span>
+      {rank === null ? (
+        <span className="font-racing text-outline text-[#6b7280] text-2xl leading-none">–</span>
+      ) : (
+        <span className="font-racing text-outline text-white leading-none">
+          <span className="text-2xl tabular-nums">{rank}</span>
+          <span className="text-xs ml-0.5 align-top">{ordinal(rank)}</span>
+        </span>
+      )}
       <AvatarDisplay avatarUrl={entry.avatar_url} characterAvatar={entry.character_avatar} imgClassName="w-8 h-8" emojiClassName="text-2xl" />
       <div className="min-w-0">
         <div className="flex items-center min-w-0">
           <p className="font-racing text-outline text-white text-base uppercase truncate leading-tight mr-1">
             {entry.name}
           </p>
-          {entry.provisional && <ProvisionalTag small />}
+          {entry.provisional && rank !== null && <ProvisionalTag small />}
           {entry.streak !== undefined && (
             <span className="shrink-0 text-orange-400 font-bold text-sm leading-none">🔥{entry.streak}</span>
           )}
         </div>
         <div className="flex items-center text-[#cbd5e1] text-xs leading-tight">
-          <span className="tabular-nums">{entry.gp} GPs</span>
+          <span className="tabular-nums">{gpLabel(entry)} GPs</span>
           {entry.wins > 0 && <span className="ml-2"><TrophyBadge wins={entry.wins} compact /></span>}
         </div>
       </div>
@@ -200,7 +207,7 @@ function MobileBoardRow({ entry, rank, onOpen }: { entry: BoardEntry; rank: numb
   );
 }
 
-function BoardRow({ entry, rank, onOpen }: { entry: BoardEntry; rank: number; onOpen: (id: string) => void }) {
+function BoardRow({ entry, rank, onOpen }: { entry: BoardEntry; rank: number | null; onOpen: (id: string) => void }) {
   return (
     <motion.div
       layout
@@ -209,19 +216,23 @@ function BoardRow({ entry, rank, onOpen }: { entry: BoardEntry; rank: number; on
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
       onClick={() => onOpen(entry.id)}
-      className={`hud-row ${ROW_GRID} px-6 py-2.5 mb-2 cursor-pointer`}
-      style={{ ["--hud-accent" as string]: MK_RED }}
+      className={`hud-row ${ROW_GRID} px-6 py-2.5 mb-2 cursor-pointer ${rank === null ? "opacity-75" : ""}`}
+      style={{ ["--hud-accent" as string]: rank === null ? "rgba(255,255,255,0.25)" : MK_RED }}
     >
-      <span className="font-racing text-outline text-white leading-none">
-        <span className="text-3xl tabular-nums">{rank}</span>
-        <span className="text-sm ml-0.5 align-top">{ordinal(rank)}</span>
-      </span>
+      {rank === null ? (
+        <span className="font-racing text-outline text-[#6b7280] text-3xl leading-none">–</span>
+      ) : (
+        <span className="font-racing text-outline text-white leading-none">
+          <span className="text-3xl tabular-nums">{rank}</span>
+          <span className="text-sm ml-0.5 align-top">{ordinal(rank)}</span>
+        </span>
+      )}
       <AvatarDisplay avatarUrl={entry.avatar_url} characterAvatar={entry.character_avatar} imgClassName="w-9 h-9" emojiClassName="text-3xl" />
       <div className="min-w-0 flex items-center">
         <p className="font-racing text-outline text-white text-xl uppercase truncate leading-tight mr-2">
           {entry.name}
         </p>
-        {entry.provisional && <ProvisionalTag />}
+        {entry.provisional && rank !== null && <ProvisionalTag />}
         {entry.streak !== undefined && (
           <span className="shrink-0 text-orange-400 font-bold text-lg leading-none">🔥{entry.streak}</span>
         )}
@@ -229,25 +240,50 @@ function BoardRow({ entry, rank, onOpen }: { entry: BoardEntry; rank: number; on
       <p className="font-racing text-outline text-2xl tabular-nums text-right" style={{ color: MK_YELLOW }}>
         {formatRating(entry)}
       </p>
-      <p className="text-[#cbd5e1] text-sm tabular-nums text-right">{entry.gp}</p>
+      <p className="text-[#cbd5e1] text-sm tabular-nums text-right">{gpLabel(entry)}</p>
       <div className="flex justify-end items-center"><Trend delta={entry.rankDelta} /></div>
       <div className="flex justify-end"><TrophyBadge wins={entry.wins} /></div>
     </motion.div>
   );
 }
 
-export function RankingBoard({ entries, onOpen, mobile }: { entries: BoardEntry[]; onOpen: (id: string) => void; mobile: boolean }) {
+// Provisional players aren't "last" — they're not ranked yet. Once at least one
+// player is ranked, provisional ones move to an unnumbered section with their
+// progress (7/10 GPs). Until then (e.g. the first days of a season) it's one list.
+export function RankingBoard({
+  entries, onOpen, mobile, unrankedLabel,
+}: { entries: BoardEntry[]; onOpen: (id: string) => void; mobile: boolean; unrankedLabel: string }) {
   const Row = mobile ? MobileBoardRow : BoardRow;
+  const ranked = entries.filter((e) => !e.provisional);
+  const split = ranked.length > 0 && ranked.length < entries.length;
+  const top = split ? ranked : entries;
+  const unranked = split ? entries.filter((e) => e.provisional) : [];
+
   return (
     <>
-      <Podium entries={entries.slice(0, 3)} onOpen={onOpen} mobile={mobile} />
-      {entries.length > 3 && <ColumnHeaders mobile={mobile} />}
+      <Podium entries={top.slice(0, 3)} onOpen={onOpen} mobile={mobile} />
+      {(top.length > 3 || unranked.length > 0) && <ColumnHeaders mobile={mobile} />}
       <div className={mobile ? "pl-2" : "flex-1 overflow-y-auto scrollbar-hide pl-3"}>
         <AnimatePresence mode="popLayout">
-          {entries.slice(3).map((entry, i) => (
+          {top.slice(3).map((entry, i) => (
             <Row key={entry.id} entry={entry} rank={i + 4} onOpen={onOpen} />
           ))}
         </AnimatePresence>
+        {unranked.length > 0 && (
+          <>
+            <div className={`flex items-center ${mobile ? "mt-3 mb-2 px-2" : "mt-4 mb-2 px-4"}`}>
+              <span className="font-racing text-outline text-[#cbd5e1] text-sm uppercase tracking-wider shrink-0">
+                {unrankedLabel}
+              </span>
+              <span className="flex-1 h-px ml-3 bg-white/20" />
+            </div>
+            <AnimatePresence mode="popLayout">
+              {unranked.map((entry) => (
+                <Row key={entry.id} entry={entry} rank={null} onOpen={onOpen} />
+              ))}
+            </AnimatePresence>
+          </>
+        )}
       </div>
     </>
   );

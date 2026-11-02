@@ -40,6 +40,7 @@ export async function rankedPlayers(supabase: SupabaseClient, archived = false):
       p1_count: p1Counts.get(p.id) ?? 0,
       rating_kind: scoring.kind,
       provisional: scoring.kind === "elo" && p.gp_played < scoring.minGp,
+      required_gp: scoring.kind === "elo" ? scoring.minGp : undefined,
     }))
     .sort((a, b) => Number(a.provisional) - Number(b.provisional) || compareRank(
       { rating: a.rating, p1: a.p1_count, name: a.name },
