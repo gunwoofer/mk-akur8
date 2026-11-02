@@ -65,7 +65,7 @@ export const api = {
   },
   seasons: {
     current: () =>
-      apiFetch<{ season_info: SeasonInfo; ranking: SeasonPlayer[] }>("/api/seasons/current"),
+      apiFetch<{ season_info: SeasonInfo; ranking: SeasonPlayer[]; season_wins: Record<string, number> }>("/api/seasons/current"),
     list: () =>
       apiFetch<SeasonSummary[]>("/api/seasons"),
     get: (yearMonth: string) =>

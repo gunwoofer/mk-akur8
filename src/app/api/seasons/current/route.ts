@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase-server";
 import {
   currentYearMonth, monthName, daysInMonth, daysLeft,
-  loadSeasonData, seasonStandings, computeSeasonWins, compareStandings, seasonKind, toSeasonPlayer,
-  type SeasonStanding,
+  loadSeasonData, seasonStandings, computeSeasonWins, seasonKind, toSeasonPlayer,
 } from "@/lib/season";
 import type { SeasonInfo } from "@/types";
 
@@ -28,21 +27,9 @@ export async function GET() {
   const seasonWins = computeSeasonWins(data, nowYM);
   const standings = seasonStandings(nowYM, data).filter((s) => !s.player.archived_at);
 
-  // Past season winners stay on the board even before they play this month.
-  const playing = new Set(standings.map((s) => s.player.id));
-  const idleWinners: SeasonStanding[] = data.players
-    .filter((p) => !p.archived_at && !playing.has(p.id) && (seasonWins.get(p.id) ?? 0) > 0)
-    .map((player) => ({
-      player, points: 0, gp: 0, p1: 0,
-      rating: kind === "elo" ? data.scoring.eloStart : 0,
-      globalRating: player.rating,
-      kind,
-      provisional: kind === "elo",
-    }));
+  // Only players who raced this month are ranked; season wins go out for everyone
+  // so trophies still show for champions who haven't played yet.
+  const ranking = standings.map((s) => toSeasonPlayer(s, seasonWins));
 
-  const ranking = [...standings, ...idleWinners]
-    .sort(compareStandings)
-    .map((s) => toSeasonPlayer(s, seasonWins));
-
-  return NextResponse.json({ season_info, ranking });
+  return NextResponse.json({ season_info, ranking, season_wins: Object.fromEntries(seasonWins) });
 }

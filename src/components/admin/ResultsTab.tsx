@@ -50,7 +50,7 @@ export default function ResultsTab() {
           api.seasons.current(),
         ]);
         setPlayers(p);
-        setSeasonWins(new Map(seasonData.ranking.map((r) => [r.player_id, r.season_wins])));
+        setSeasonWins(new Map(Object.entries(seasonData.season_wins)));
         setHistory(h);
         setHistoryOffset(h.length);
         setHasMore(h.length === PAGE_SIZE);
@@ -91,7 +91,7 @@ export default function ResultsTab() {
       setSeasonsLoaded(false);
       const [p, seasonData] = await Promise.all([api.players.list(), api.seasons.current()]);
       setPlayers(p);
-      setSeasonWins(new Map(seasonData.ranking.map((r) => [r.player_id, r.season_wins])));
+      setSeasonWins(new Map(Object.entries(seasonData.season_wins)));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete GP");
     } finally {

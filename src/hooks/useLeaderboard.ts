@@ -147,10 +147,8 @@ export function useLeaderboard() {
         frozenSeasonBaselineRef.current = { ...liveSeasonRanksRef.current };
       }
 
-      // Build season_wins lookup from season ranking
-      const seasonWinsById = new Map(
-        (seasonData?.ranking ?? []).map((p) => [p.player_id, p.season_wins])
-      );
+      // Every player's season wins — not only those ranked this month.
+      const seasonWinsById = new Map(Object.entries(seasonData?.season_wins ?? {}));
 
       const frozenGlobal = frozenBaselineRef.current;
       const newRanked: RankedPlayer[] = sorted.map((p, i) => ({
