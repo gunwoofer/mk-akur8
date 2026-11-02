@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 import type { Player } from "@/types";
 import AvatarDisplay from "@/components/AvatarDisplay";
+import { formatPlayerRating, ratingUnit } from "@/lib/format";
 import PhotoCropModal from "./PhotoCropModal";
 
 const AVATARS = ["🏎️", "🍄", "⭐", "🦕", "🐢", "👸", "🦊", "🐸", "🐧", "🦁", "🐉", "🌸"];
@@ -257,7 +258,7 @@ export default function PlayersTab() {
 
                 <div className="flex-1 min-w-0">
                   <p className="text-white font-semibold text-sm truncate">{p.name}</p>
-                  <p className="text-gray-600 text-xs">{p.gp_played} GPs · {p.rating.toFixed(2)} pts</p>
+                  <p className="text-gray-600 text-xs">{p.gp_played} GPs · {formatPlayerRating(p)} {ratingUnit(p.rating_kind)}</p>
                 </div>
                 <button
                   onClick={() => deletePlayer(p)}
@@ -290,7 +291,7 @@ export default function PlayersTab() {
               />
               <div className="flex-1 min-w-0">
                 <p className="text-white font-semibold text-sm truncate">{p.name}</p>
-                <p className="text-gray-600 text-xs">{p.gp_played} GPs · {p.rating.toFixed(2)} pts</p>
+                <p className="text-gray-600 text-xs">{p.gp_played} GPs · {formatPlayerRating(p)} {ratingUnit(p.rating_kind)}</p>
               </div>
               <button
                 onClick={() => restorePlayer(p)}

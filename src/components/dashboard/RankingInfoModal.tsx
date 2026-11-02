@@ -76,6 +76,17 @@ export default function RankingInfoModal({ onClose }: { onClose: () => void }) {
             <p className="text-gray-600 text-sm text-center py-12">Loading…</p>
           ) : (<>
 
+          {config.global_kind === "elo" ? (
+            <section>
+              <p className="text-[#00d4ff] text-xs font-semibold uppercase tracking-widest mb-3">
+                Global ranking — all-time Elo
+              </p>
+              <p className="text-gray-400 text-sm">
+                The global ranking is an <span className="text-white font-medium">Elo rating that never resets</span>. Everyone starts at <span className="text-white font-medium">{config.season_elo_start}</span> on their first GP, and every GP since then moves it with the same duel formula as the seasons below: beat stronger players to climb, lose to weaker ones and you drop. Only the order between humans counts — bots are ignored.
+              </p>
+            </section>
+          ) : (
+          <>
           {/* Step 1 — Points */}
           <section>
             <p className="text-[#00d4ff] text-xs font-semibold uppercase tracking-widest mb-3">
@@ -160,6 +171,9 @@ export default function RankingInfoModal({ onClose }: { onClose: () => void }) {
               <span className="text-white font-semibold">The key insight:</span> winning one race takes you to {rating(p1, 1)}. Winning twenty takes you to {rating(p1 * 20, 20)}. You cannot shortcut the leaderboard — sustained front-running across many GPs is the only path to the top. Scores are locked in when each GP is submitted, so any change to these rules only applies to future GPs.
             </p>
           </section>
+
+          </>
+          )}
 
           {/* Seasons */}
           <section>

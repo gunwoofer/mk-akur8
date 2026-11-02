@@ -51,7 +51,9 @@ export default function PlayerModal({ stats, playerName, streak, initialView, on
   const block: StatBlock | null = stats ? (effectiveView === "season" ? stats.current_season.stats : stats.global) : null;
   const ring = (block?.rank && RANK_RING[block.rank]) || MK_RED;
   // Global keeps the 0–15 average format; the season uses its own kind (Elo from Nov 2026).
-  const kind: SeasonKind = effectiveView === "season" && stats ? stats.current_season.kind : "average";
+  const kind: SeasonKind = !stats
+    ? "average"
+    : effectiveView === "season" ? stats.current_season.kind : stats.player.rating_kind ?? "average";
 
   return (
     <motion.div
@@ -162,7 +164,7 @@ export default function PlayerModal({ stats, playerName, streak, initialView, on
                     <p className="text-[#9ca3af] text-xs uppercase tracking-widest mb-1">
                       {effectiveView === "season"
                         ? `${stats.current_season.month_name} ${kind === "elo" ? "Elo" : "rating"}`
-                        : "Global rating"}
+                        : kind === "elo" ? "Global Elo" : "Global rating"}
                     </p>
                     <div className="flex items-end">
                       <p className={`font-racing text-outline tabular-nums leading-none ${mobile ? "text-5xl" : "text-6xl"}`} style={{ color: MK_YELLOW }}>

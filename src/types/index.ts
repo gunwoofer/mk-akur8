@@ -7,6 +7,7 @@ export interface Player {
   gp_played: number;
   p1_count?: number;
   archived_at?: string | null;
+  rating_kind?: SeasonKind;  // "elo" when scoring_settings.global_elo_from is active
 }
 
 export interface Match {
@@ -163,4 +164,6 @@ export interface ScoringConfig {
   season_elo_k: number;
   season_elo_scale: number;
   season_min_gp: number;
+  global_elo_from: string | null;
+  global_kind: SeasonKind;
 }

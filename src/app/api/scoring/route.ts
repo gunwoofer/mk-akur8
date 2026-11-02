@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase-server";
+import { currentYearMonth } from "@/lib/season";
 import type { ScoringConfig } from "@/types";
 
 export async function GET() {
@@ -7,7 +8,7 @@ export async function GET() {
   const [{ data: points, error: pointsError }, { data: settings, error: settingsError }] = await Promise.all([
     supabase.from("position_points").select("position, points").order("position"),
     supabase.from("scoring_settings")
-      .select("global_prior, season_prior, season_elo_from, season_elo_start, season_elo_k, season_elo_scale, season_min_gp")
+      .select("global_prior, season_prior, season_elo_from, season_elo_start, season_elo_k, season_elo_scale, season_min_gp, global_elo_from")
       .single(),
   ]);
 
@@ -18,6 +19,10 @@ export async function GET() {
     );
   }
 
-  const config: ScoringConfig = { points, ...settings };
+  const config: ScoringConfig = {
+    points,
+    ...settings,
+    global_kind: settings.global_elo_from && currentYearMonth() >= settings.global_elo_from ? "elo" : "average",
+  };
   return NextResponse.json(config);
 }

@@ -10,6 +10,14 @@ export function formatSeasonDelta(delta: number, kind: SeasonKind): string {
   return `${delta >= 0 ? "+" : "−"}${abs}`;
 }
 
+export function formatPlayerRating(p: { rating: number; rating_kind?: SeasonKind }): string {
+  return formatSeasonRating(p.rating, p.rating_kind ?? "average");
+}
+
+export function ratingUnit(kind: SeasonKind | undefined): string {
+  return kind === "elo" ? "Elo" : "pts";
+}
+
 // Below this a change rounds to nothing in the format above.
 export function deltaThreshold(kind: SeasonKind): number {
   return kind === "elo" ? 0.5 : 0.005;

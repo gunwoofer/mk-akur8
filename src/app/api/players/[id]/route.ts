@@ -104,7 +104,7 @@ export async function GET(
   const prevSeason = seasonRows[seasonRows.length - 2];
 
   const stats: PlayerStats = {
-    player: player as Player,
+    player: { ...(player as Player), rating_kind: ranked[0]?.rating_kind ?? "average" },
     season_wins: computeSeasonWins(seasonData, nowYM).get(id) ?? 0,
     current_season: {
       year_month: nowYM,

@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import type { Player } from "@/types";
 import AvatarDisplay from "@/components/AvatarDisplay";
+import { formatPlayerRating, ratingUnit } from "@/lib/format";
 
 interface Props {
   players: Player[];
@@ -49,7 +50,7 @@ export default function LobbyStep({ players, loading, error, selected, onToggle,
               <AvatarDisplay avatarUrl={p.avatar_url} characterAvatar={p.character_avatar} imgClassName="w-8 h-8" emojiClassName="text-2xl" />
               <div className="flex-1 min-w-0">
                 <p className="text-white text-sm font-semibold truncate">{p.name}</p>
-                <p className="text-gray-600 text-xs">{p.gp_played} GPs · {p.rating.toFixed(2)} pts</p>
+                <p className="text-gray-600 text-xs">{p.gp_played} GPs · {formatPlayerRating(p)} {ratingUnit(p.rating_kind)}</p>
               </div>
               <motion.div
                 animate={{ scale: on ? 1 : 0.4, opacity: on ? 1 : 0 }}

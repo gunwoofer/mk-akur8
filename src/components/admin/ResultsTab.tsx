@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { Player, HistoryEntry, SeasonSummary, SeasonPlayer } from "@/types";
 import AvatarDisplay from "@/components/AvatarDisplay";
-import { formatSeasonRating } from "@/lib/format";
+import { formatSeasonRating, formatPlayerRating } from "@/lib/format";
 
 function TrophyBadge({ wins }: { wins: number }) {
   if (wins === 0) return null;
@@ -207,7 +207,7 @@ export default function ResultsTab() {
                   <p className="text-gray-500 text-xs">{p.gp_played} GPs</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <p className="text-[#00d4ff] font-bold tabular-nums">{p.rating.toFixed(2)}</p>
+                  <p className="text-[#00d4ff] font-bold tabular-nums">{formatPlayerRating(p)}</p>
                   <TrophyBadge wins={seasonWins.get(p.id) ?? 0} />
                 </div>
               </div>
