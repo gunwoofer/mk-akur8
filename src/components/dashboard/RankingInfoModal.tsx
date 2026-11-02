@@ -61,7 +61,9 @@ export default function RankingInfoModal({ onClose }: { onClose: () => void }) {
         <div className="flex items-center justify-between px-6 py-5 border-b border-[#2a2a2a]">
           <div>
             <h2 className="text-white font-black text-2xl italic tracking-tight">How Rankings Work</h2>
-            <p className="text-gray-500 text-sm mt-0.5">Bayesian rating with experience weight</p>
+            <p className="text-gray-500 text-sm mt-0.5">
+              {config?.global_kind === "elo" ? "Elo ratings, like in chess" : "Bayesian rating with experience weight"}
+            </p>
           </div>
           <button
             onClick={onClose}

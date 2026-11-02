@@ -52,7 +52,7 @@ const CONGRATS_TEMPLATES_TIE = [
   "History made — {name1} & {name2} finish level! 📖",
   "The office has two champions today: {name1} & {name2}! 🎉",
   "Call it a draw — {name1} and {name2} refuse to lose! 🤝",
-  "Identical points, identical glory. {name1} = {name2}! ⚖️",
+  "Identical finish, identical glory. {name1} = {name2}! ⚖️",
   "Rainbow Road treated {name1} & {name2} exactly the same! 🌈",
   "Not one winner, but two — {name1} & {name2} share P1! 🥇🥇",
 ];

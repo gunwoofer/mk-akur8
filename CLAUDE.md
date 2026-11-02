@@ -75,11 +75,18 @@ points     int
 ```
 Positions 1–12 award 15/12/10/9/8/7/6/5/4/3/2/1 points. Positions 13–24 award 0. **Single source of truth** — no copy in code. Server code reads it directly; the client reads it via `api.scoring.get()` (`GET /api/scoring`).
 
-**`scoring_settings`** — single row (`id = true`), single source for the priors
+**`scoring_settings`** — single row (`id = true`), every scoring parameter
 ```
-global_prior  int  (20 — phantom games in the global rating)
-season_prior  int  ( 5 — phantom games in the season rating, used by src/lib/season.ts)
+season_elo_from   text  ('2026-06' — seasons from this month use the monthly Elo)
+global_elo_from   text  ('2026-06' — global rating is the all-time Elo from this month; NULL = legacy average)
+season_elo_start  int   (1500 — everyone's Elo on the 1st of each month, and on their first GP globally)
+season_elo_k      int   (32   — max change per GP)
+season_elo_scale  int   (400  — 400-point gap = 10:1 expected odds, as in chess)
+season_min_gp     int   (5    — GPs in the month to be eligible to win it; below = provisional)
+global_min_gp     int   (10   — GPs to be ranked globally; below = provisional)
+global_prior, season_prior  (legacy average formula, unused while both *_elo_from are set)
 ```
+**Scoring is Elo everywhere (decided 2026-11-02)** — no more 0–15 averages in the UI. Every pair of humans in a GP is a duel (finished ahead = 1, shared position = 0.5, bots ignored); change = K × Σ(score − expected) / opponents, expected = 1 / (1 + 10^((their − yours) / scale)). The season Elo resets to 1500 each month; the global Elo never resets. Provisional players (under the min GPs) are shown in an unnumbered "Not ranked yet / Not eligible yet" section, never on the podium — unless nobody is ranked yet, then it's one list with PROV tags.
 Changing `scoring_settings` or `position_points` only affects GPs submitted **afterwards** — see the ledger below.
 
 **`rating_changes`** — the frozen scoring ledger, one row per player per GP, written once when the GP is scored: position, points, running `total_points`/`gp_count`, `rating_before`/`rating_after`, and the season figures (`season` = YYYY-MM in America/Montreal, `season_points`/`season_gp`/`season_p1`/`season_rating`). Past rows are never recomputed when the rules change — **this is the core invariant: a formula change must only affect future GPs.**
@@ -91,7 +98,7 @@ Views: `season_standings` (each player's last ledger row per season, incl. `glob
 - `score_gp`, `rescore_from`, `sync_player_ratings` — internals. To add a new formula, change `score_gp` (and add ledger columns for its state); old rows stay as they are.
 - Never write `race_results` directly — there is no trigger anymore, so the ledger would not be updated.
 
-Current rating formula (in `score_gp`): `R = total_points / (global_prior + gp_count)`, rounded to 4 decimals — a Bayesian average with a fixed prior of 20 phantom zero-point games. Ratings live in [0, 15]; 15 is approached only by someone who wins every race. A newcomer finishing P1 once scores 15/21 ≈ 0.71, while a 34-GP player with solid results scores proportionally higher. The prior is intentionally strong: you need ~20 real GPs before your actual average dominates.
+`position_points` is only used for the informational `points`/`total_points` ledger columns now; ratings come from the Elo duels in `score_gp`. `season_kind` / `global_kind` on each ledger row record which formula scored it (`elo` or legacy `average`); `src/lib/format.ts` formats Elo as whole numbers.
 
 ---
 
@@ -220,7 +227,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 ```
 
 ### Ranking & seasons
-- **Ordering:** every leaderboard sorts with `compareRank` (`src/lib/ranking.ts`): rating ↓, then P1 count ↓, then (seasons only) global rating ↓, then name. Season winner = first row of `seasonStandings`, so the ranking and the winner can never disagree. `/api/players` returns `p1_count` and is pre-sorted.
+- **Ordering:** every leaderboard sorts provisional players after ranked ones, then with `compareRank` (`src/lib/ranking.ts`): rating ↓, P1 count ↓, name. Elo seasons never use the global rating, not even for tie-breaks (legacy average seasons used it before name). Season winner = first row of `seasonStandings`, so the ranking and the winner can never disagree. `/api/players` returns `p1_count` and is pre-sorted.
 - **Seasons** are calendar months in **`America/Montreal`** time (`toYearMonth` / `currentYearMonth` in `src/lib/season.ts`). Never slice ISO strings for months — that's UTC.
 - **Row limit:** Supabase silently caps every select at 1000 rows. Any query over a growing table (`race_results`, `matches`) must go through `fetchAll` (`src/lib/fetch-all.ts`) with a stable `.order(...)`, ending in `id`.
 - **Submitting a GP** is atomic (`submit_gp`), so empty GPs can't happen.
