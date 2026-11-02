@@ -184,20 +184,24 @@ export function SeasonLineChart({
   );
 }
 
-/* ── Global rating at the end of each season ───────────────────────────── */
+/* ── Season score at the end of each month ───────────────────────────────
+   Each Elo season restarts at the same value, so month-end scores compare
+   directly. Older average-based seasons use another scale: only seasons of the
+   latest season's kind are drawn. */
 
-export function SeasonEndRatingChart({ seasons, height = 200 }: { seasons: SeasonRecord[]; height?: number }) {
+export function SeasonEndChart({ seasons, height = 200 }: { seasons: SeasonRecord[]; height?: number }) {
   const [ref, width] = useWidth<HTMLDivElement>();
   const [hover, setHover] = useState<number | null>(null);
 
-  const shown = seasons.slice(-12);
+  const latestKind = seasons[seasons.length - 1]?.kind;
+  const shown = seasons.filter((s) => s.kind === latestKind).slice(-12);
   if (shown.length === 0) {
     return <p className="text-sm text-center py-10" style={{ color: AXIS_TEXT }}>No season played yet.</p>;
   }
 
-  const elo = shown.every((s) => s.global_kind === "elo");
-  const fmt = (s: SeasonRecord) => formatSeasonRating(s.global_rating_end, s.global_kind);
-  const values = shown.map((s) => s.global_rating_end);
+  const elo = latestKind === "elo";
+  const fmt = (s: SeasonRecord) => formatSeasonRating(s.rating, s.kind);
+  const values = shown.map((s) => s.rating);
   const { bottom, top, ticks } = elo
     ? eloScale(Math.min(...values), Math.max(...values))
     : { bottom: 0, ...niceScale(Math.max(...values)) };
@@ -208,7 +212,7 @@ export function SeasonEndRatingChart({ seasons, height = 200 }: { seasons: Seaso
   const band = innerW / shown.length;
   const cx = (i: number) => pad.left + band * (i + 0.5);
   const y = (v: number) => pad.top + innerH - ((v - bottom) / (top - bottom)) * innerH;
-  const line = shown.map((s, i) => `${i === 0 ? "M" : "L"}${cx(i).toFixed(1)},${y(s.global_rating_end).toFixed(1)}`).join(" ");
+  const line = shown.map((s, i) => `${i === 0 ? "M" : "L"}${cx(i).toFixed(1)},${y(s.rating).toFixed(1)}`).join(" ");
   const last = shown.length - 1;
 
   const onMove = (e: React.MouseEvent | React.TouchEvent) => {
@@ -230,7 +234,7 @@ export function SeasonEndRatingChart({ seasons, height = 200 }: { seasons: Seaso
           onTouchMove={onMove}
           onMouseLeave={() => setHover(null)}
           role="img"
-          aria-label={`Global rating at the end of ${shown.length} seasons, now ${fmt(shown[last])}`}
+          aria-label={`Season score at the end of ${shown.length} months, latest ${fmt(shown[last])}`}
         >
           {ticks.map((t) => (
             <g key={t}>
@@ -258,19 +262,19 @@ export function SeasonEndRatingChart({ seasons, height = 200 }: { seasons: Seaso
             <g key={s.year_month}>
               <circle
                 cx={cx(i)}
-                cy={y(s.global_rating_end)}
+                cy={y(s.rating)}
                 r={s.won ? 6 : 4}
                 fill={s.is_current ? SURFACE : SERIES}
                 stroke={s.is_current ? SERIES : SURFACE}
                 strokeWidth={2}
               />
-              {s.won && <text x={cx(i)} y={y(s.global_rating_end) - 10} textAnchor="middle" fontSize={13}>🏆</text>}
+              {s.won && <text x={cx(i)} y={y(s.rating) - 10} textAnchor="middle" fontSize={13}>🏆</text>}
               <text x={cx(i)} y={height - 6} textAnchor="middle" fontSize={11} fill={TEXT}>
                 {s.is_current ? "Now" : s.month_name.slice(0, 3)}
               </text>
             </g>
           ))}
-          <text x={cx(last) + 10} y={y(shown[last].global_rating_end) + 4} fontSize={12} fontWeight={600} fill={TEXT}>
+          <text x={cx(last) + 10} y={y(shown[last].rating) + 4} fontSize={12} fontWeight={600} fill={TEXT}>
             {fmt(shown[last])}
           </text>
           <rect x={0} y={0} width={width} height={height} fill="transparent" />
@@ -279,10 +283,10 @@ export function SeasonEndRatingChart({ seasons, height = 200 }: { seasons: Seaso
       {h && hover !== null && (
         <Tooltip
           x={cx(hover)}
-          y={y(h.global_rating_end)}
+          y={y(h.rating)}
           width={width}
           lines={[
-            [fmt(h), `${h.global_kind === "elo" ? "Elo" : "rating"} · end of ${h.month_name}${h.is_current ? " (so far)" : ""}`],
+            [fmt(h), `${h.kind === "elo" ? "season Elo" : "season rating"} · ${h.is_current ? `${h.month_name} so far` : `end of ${h.month_name}`}`],
             [`#${h.rank} of ${h.players}`, `that season${h.won ? " 🏆" : ""} · ${h.gp} GPs`],
           ]}
         />

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { PlayerStats, SeasonKind, StatBlock } from "@/types";
 import AvatarDisplay from "@/components/AvatarDisplay";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { SeasonLineChart, SeasonEndRatingChart } from "./PlayerCharts";
+import { SeasonLineChart, SeasonEndChart } from "./PlayerCharts";
 import { formatSeasonRating, formatSeasonDelta, deltaThreshold } from "@/lib/format";
 
 type View = "season" | "global";
@@ -207,12 +207,14 @@ export default function PlayerModal({ stats, playerName, streak, initialView, on
                   <p className="text-white text-sm font-semibold">
                     {effectiveView === "season"
                       ? `Season ${kind === "elo" ? "Elo" : "rating"} after each GP`
-                      : `Global ${kind === "elo" ? "Elo" : "rating"} at the end of each season`}
+                      : `Season ${stats.seasons[stats.seasons.length - 1]?.kind === "elo" ? "Elo" : "rating"} at the end of each month`}
                   </p>
                   <p className="text-[#9ca3af] text-xs mb-2">
                     {effectiveView === "season"
                       ? `${stats.current_season.month_name} · ${block.gp} GP${block.gp !== 1 ? "s" : ""}`
-                      : "After their last GP of each month · 🏆 season won"}
+                      : stats.seasons.some((s) => s.kind !== stats.seasons[stats.seasons.length - 1]?.kind)
+                        ? "Elo seasons only (older seasons used another scale) · 🏆 season won"
+                        : "Final score of each season · 🏆 season won"}
                   </p>
                   {effectiveView === "season"
                     ? (
@@ -223,7 +225,7 @@ export default function PlayerModal({ stats, playerName, streak, initialView, on
                         height={mobile ? 160 : 190}
                       />
                     )
-                    : <SeasonEndRatingChart seasons={stats.seasons} height={mobile ? 180 : 210} />}
+                    : <SeasonEndChart seasons={stats.seasons} height={mobile ? 180 : 210} />}
                 </div>
 
                 {/* Form */}

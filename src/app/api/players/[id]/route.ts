@@ -5,7 +5,7 @@ import { rankedPlayers } from "@/lib/players";
 import {
   currentYearMonth, monthName, loadSeasonData, seasonStandings, computeSeasonWins, seasonKind, type SeasonData,
 } from "@/lib/season";
-import type { Player, PlayerStats, SeasonKind, SeasonRecord, StatBlock } from "@/types";
+import type { Player, PlayerStats, SeasonRecord, StatBlock } from "@/types";
 
 export async function PATCH(
   req: NextRequest,
@@ -78,7 +78,7 @@ export async function GET(
       fetchAll<LedgerRow>((from, to) =>
         supabase
           .from("rating_changes")
-          .select("match_id, played_at, season, position, rating_before, rating_after, season_rating, global_kind")
+          .select("match_id, played_at, season, position, rating_before, rating_after, season_rating")
           .eq("player_id", id)
           .order("played_at")
           .order("match_id")
@@ -100,7 +100,6 @@ export async function GET(
   const globalRank = ranked.findIndex((p) => p.id === id);
 
   const lastGlobal = rows[rows.length - 1];
-  const lastRowBySeason = new Map(rows.map((r) => [r.season, r]));   // rows are oldest first
   const lastSeason = seasonRows[seasonRows.length - 1];
   const prevSeason = seasonRows[seasonRows.length - 2];
 
@@ -129,7 +128,6 @@ export async function GET(
       ranked.length,
     ),
     seasons: seasonData.sortedMonths.flatMap((ym): SeasonRecord[] => {
-      const lastOfMonth = lastRowBySeason.get(ym);
       const standings = seasonStandings(ym, seasonData);
       const idx = standings.findIndex((s) => s.player.id === id);
       if (idx < 0) return [];
@@ -143,8 +141,6 @@ export async function GET(
         is_current: ym === nowYM,
         kind: standings[idx].kind,
         players: standings.length,
-        global_rating_end: lastOfMonth?.rating_after ?? 0,
-        global_kind: lastOfMonth?.global_kind ?? "average",
       }];
     }),
   };
@@ -160,7 +156,6 @@ interface LedgerRow {
   rating_before: number;
   rating_after: number;
   season_rating: number;
-  global_kind: SeasonKind;
 }
 
 function statBlock(
