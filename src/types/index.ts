@@ -59,6 +59,8 @@ export interface SeasonRecord {
   is_current: boolean;
   kind: SeasonKind;
   players: number;
+  global_rating_end: number;     // global rating after the player's last GP of that month
+  global_kind: SeasonKind;
 }
 
 export interface PlayerStats {

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { PlayerStats, SeasonKind, StatBlock } from "@/types";
 import AvatarDisplay from "@/components/AvatarDisplay";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { SeasonLineChart, SeasonRankChart } from "./PlayerCharts";
+import { SeasonLineChart, SeasonEndRatingChart } from "./PlayerCharts";
 import { formatSeasonRating, formatSeasonDelta, deltaThreshold } from "@/lib/format";
 
 type View = "season" | "global";
@@ -207,12 +207,12 @@ export default function PlayerModal({ stats, playerName, streak, initialView, on
                   <p className="text-white text-sm font-semibold">
                     {effectiveView === "season"
                       ? `Season ${kind === "elo" ? "Elo" : "rating"} after each GP`
-                      : "Finishing position by season"}
+                      : `Global ${kind === "elo" ? "Elo" : "rating"} at the end of each season`}
                   </p>
                   <p className="text-[#9ca3af] text-xs mb-2">
                     {effectiveView === "season"
                       ? `${stats.current_season.month_name} · ${block.gp} GP${block.gp !== 1 ? "s" : ""}`
-                      : "Where they finished each month · 🏆 season won"}
+                      : "After their last GP of each month · 🏆 season won"}
                   </p>
                   {effectiveView === "season"
                     ? (
@@ -223,7 +223,7 @@ export default function PlayerModal({ stats, playerName, streak, initialView, on
                         height={mobile ? 160 : 190}
                       />
                     )
-                    : <SeasonRankChart seasons={stats.seasons} height={mobile ? 180 : 210} />}
+                    : <SeasonEndRatingChart seasons={stats.seasons} height={mobile ? 180 : 210} />}
                 </div>
 
                 {/* Form */}
