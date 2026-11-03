@@ -79,17 +79,7 @@ export default function RankingInfoModal({ onClose }: { onClose: () => void }) {
           ) : (<>
 
           {config.global_kind === "elo" ? (
-            <section>
-              <p className="text-[#00d4ff] text-xs font-semibold uppercase tracking-widest mb-3">
-                Global ranking — all-time Elo
-              </p>
-              <p className="text-gray-400 text-sm">
-                The global ranking is an <span className="text-white font-medium">Elo rating that never resets</span>. Everyone starts at <span className="text-white font-medium">{config.season_elo_start}</span> on their first GP, and every GP since then moves it with the same duel formula as the seasons below: beat stronger players to climb, lose to weaker ones and you drop. Only the order between humans counts — bots are ignored.
-              </p>
-              <p className="text-gray-400 text-sm mt-3">
-                With few GPs an Elo has barely moved from the start, so it says little about someone&apos;s level: players with fewer than <span className="text-white font-medium">{config.global_min_gp} GPs</span> are marked <span className="text-white font-medium">PROV</span> (provisional) and listed after everyone else until they reach it.
-              </p>
-            </section>
+            <EloGuide config={config} />
           ) : (
           <>
           {/* Step 1 — Points */}
@@ -177,9 +167,6 @@ export default function RankingInfoModal({ onClose }: { onClose: () => void }) {
             </p>
           </section>
 
-          </>
-          )}
-
           {/* Seasons */}
           <section>
             <p className="text-[#00d4ff] text-xs font-semibold uppercase tracking-widest mb-3">
@@ -224,9 +211,123 @@ export default function RankingInfoModal({ onClose }: { onClose: () => void }) {
               ))}
             </div>
           </section>
+          </>
+          )}
           </>)}
         </div>
       </motion.div>
     </motion.div>
   );
 }
+
+/* ── Elo explanation (shown while the global ranking is an Elo) ─────────── */
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <p className="text-[#00d4ff] text-xs font-semibold uppercase tracking-widest mb-2">{title}</p>
+      {children}
+    </section>
+  );
+}
+
+const TEXT = "text-gray-400 text-sm leading-relaxed";
+const STRONG = "text-white font-medium";
+
+function EloGuide({ config }: { config: ScoringConfig }) {
+  const k = config.season_elo_k;
+  const scale = config.season_elo_scale;
+  const start = config.season_elo_start;
+  const expected = (lead: number) => 1 / (1 + Math.pow(10, -lead / scale));
+  const winGain = (lead: number) => Math.round(k * (1 - expected(lead)));   // you win, you were `lead` above
+  const signed = (v: number) => (v > 0 ? `+${v}` : v < 0 ? `−${Math.abs(v)}` : "0");
+
+  const examples = [
+    { label: "Beat an equal player", value: signed(winGain(0)) },
+    { label: "Beat someone 200 above you", value: signed(winGain(-200)) },
+    { label: "Beat someone 200 below you", value: signed(winGain(200)) },
+    { label: "Lose to someone 200 below you", value: signed(-winGain(-200)) },
+  ];
+  const fourEqual = [k / 2, k / 6, -k / 6, -k / 2].map((v) => signed(Math.round(v)));
+
+  return (
+    <>
+      <Section title="1 · How a GP counts">
+        <p className={TEXT}>
+          Every pair of players in a GP is a <span className={STRONG}>duel</span>: finish ahead and you win it, same position is a draw.
+          Bots are ignored — only the order between humans matters. Your change is averaged over your opponents, so a
+          2-player GP weighs the same as a 4-player one.
+        </p>
+      </Section>
+
+      <Section title="2 · The formula">
+        <div className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl px-5 py-4 font-mono text-center">
+          <p className="text-white text-sm">
+            change = <span className="text-[#00d4ff]">{k}</span> × Σ(result − expected) / opponents
+          </p>
+          <p className="text-gray-500 text-xs mt-2">
+            expected = 1 / (1 + 10^((their Elo − your Elo) / {scale})) · result: win 1, draw 0.5, loss 0
+          </p>
+        </div>
+        <div className="grid grid-cols-4 gap-1 mt-2">
+          {[0, 100, 200, 400].map((lead) => (
+            <div key={lead} className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-2 py-2 text-center">
+              <p className="text-gray-500 text-[11px]">{lead === 0 ? "Equal" : `${lead} above`}</p>
+              <p className="text-white text-sm font-bold tabular-nums">{Math.round(expected(lead) * 100)}%</p>
+            </div>
+          ))}
+        </div>
+        <p className="text-gray-600 text-xs mt-1">Chance you&apos;re expected to finish ahead, by how much your Elo is above theirs.</p>
+      </Section>
+
+      <Section title="3 · Examples">
+        <div className="space-y-1.5">
+          {examples.map(({ label, value }) => (
+            <div key={label} className="flex items-center justify-between bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-4 py-2">
+              <p className="text-white text-xs">{label} <span className="text-gray-600">(1 vs 1)</span></p>
+              <span className={`font-black text-base tabular-nums ${value.startsWith("−") ? "text-[#f87171]" : "text-[#4ade80]"}`}>{value}</span>
+            </div>
+          ))}
+          <div className="flex items-center justify-between bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-4 py-2">
+            <p className="text-white text-xs">4 equal players <span className="text-gray-600">(1st → 4th)</span></p>
+            <span className="text-white font-black text-base tabular-nums">{fourEqual.join("  ")}</span>
+          </div>
+        </div>
+      </Section>
+
+      <Section title="4 · Seasons">
+        <p className={TEXT}>
+          Each calendar month (Montreal time) is a season. Everyone restarts at <span className={STRONG}>{start}</span> on the 1st.
+          The winner 🏆 is the highest Elo at month end among players with at least{" "}
+          <span className={STRONG}>{config.season_min_gp} GPs</span> that month — the others show under
+          {" "}<span className={STRONG}>Not eligible yet</span> with their progress. Ties go to the most 1st places.
+        </p>
+      </Section>
+
+      <Section title="5 · Global ranking">
+        <p className={TEXT}>
+          The same Elo, but it never resets: you start at <span className={STRONG}>{start}</span> on your first GP.
+          You need <span className={STRONG}>{config.global_min_gp} GPs</span> to be ranked — before that, a few results
+          say little about your level, so you show under <span className={STRONG}>Not ranked yet</span>.
+        </p>
+      </Section>
+
+      <Section title="6 · Good to know">
+        <ul className="space-y-1.5">
+          {[
+            "You can lose points: finish below what your Elo predicts and you drop. What some gain, others lose.",
+            "Playing more earns nothing by itself — only beating the odds does. Wins against weaker players are worth less and less.",
+            `One GP moves you by at most ±${k}, and the 30th GP of the month counts as much as the 1st.`,
+            "Scores are locked in when a GP is submitted. Deleting a GP recalculates the ones played after it.",
+          ].map((line) => (
+            <li key={line} className="flex text-gray-400 text-sm leading-relaxed">
+              <span className="text-[#00d4ff] mr-2">•</span>
+              <span>{line}</span>
+            </li>
+          ))}
+        </ul>
+      </Section>
+    </>
+  );
+}
+
