@@ -170,3 +170,51 @@ export interface ScoringConfig {
   global_kind: SeasonKind;
   global_min_gp: number;
 }
+
+export interface Track {
+  id: string;
+  name: string;
+  kind: "main" | "snes";
+  image: string;
+  sort_order: number;
+  plays: number;              // races recorded on this track
+}
+
+export interface RaceSubmission {
+  track_id: string;
+  finishes: { player_id: string; position: number }[];
+}
+
+export interface TrackLine {
+  track: Pick<Track, "id" | "name" | "image">;
+  races: number;
+  avg_finish: number;
+  wins: number;
+  podiums: number;
+}
+
+export interface PlayerTrackStats {
+  races: number;
+  wins: number;
+  podiums: number;
+  avg_finish: number | null;
+  best: TrackLine | null;        // best avg finish, min_races required
+  worst: TrackLine | null;
+  most_played: TrackLine | null;
+  tracks: TrackLine[];           // every track raced, best avg finish first
+  min_races: number;
+}
+
+export interface TrackOverview {
+  track: Pick<Track, "id" | "name" | "image" | "kind">;
+  races: number;
+  avg_finish: number | null;     // all humans
+  king: { player_id: string; name: string; character_avatar: string; avatar_url: string | null; avg_finish: number; races: number } | null;
+}
+
+export interface TracksOverview {
+  tracks: TrackOverview[];       // most played first, unplayed last
+  hardest: string | null;        // track ids (min_races required)
+  easiest: string | null;
+  min_races: number;
+}

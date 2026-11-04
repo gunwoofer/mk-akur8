@@ -11,10 +11,12 @@ interface Props {
   error: string | null;
   selected: Set<string>;
   onToggle: (id: string) => void;
+  recordRaces: boolean;
+  onToggleRecordRaces: (on: boolean) => void;
   onNext: () => void;
 }
 
-export default function LobbyStep({ players, loading, error, selected, onToggle, onNext }: Props) {
+export default function LobbyStep({ players, loading, error, selected, onToggle, recordRaces, onToggleRecordRaces, onNext }: Props) {
   if (loading) return (
     <div className="flex justify-center py-16">
       <div className="w-5 h-5 border-2 border-[#00d4ff] border-t-transparent rounded-full animate-spin" />
@@ -65,6 +67,23 @@ export default function LobbyStep({ players, loading, error, selected, onToggle,
       </div>
 
       <div className="sticky bottom-0 bg-[#0a0a0a] pt-2 pb-1">
+        <button
+          onClick={() => onToggleRecordRaces(!recordRaces)}
+          className="w-full flex items-center justify-between px-4 py-3 mb-2 rounded-2xl border border-[#1e1e1e] bg-[#141414] text-left"
+        >
+          <span>
+            <span className="block text-white text-sm font-semibold">🏁 Record each race</span>
+            <span className="block text-gray-600 text-xs">Tracks and positions, race by race (optional)</span>
+          </span>
+          <span className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${recordRaces ? "bg-[#00d4ff]" : "bg-[#2a2a2a]"}`}>
+            <motion.span
+              animate={{ x: recordRaces ? 20 : 0 }}
+              transition={{ type: "spring", stiffness: 500, damping: 32 }}
+              className="absolute w-5 h-5 rounded-full bg-white"
+              style={{ top: 2, left: 2 }}
+            />
+          </span>
+        </button>
         <motion.button
           onClick={onNext}
           disabled={selected.size === 0}

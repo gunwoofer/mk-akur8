@@ -1,4 +1,4 @@
-import type { Player, PlayerStats, HistoryEntry, ScoringConfig, SeasonInfo, SeasonPlayer, SeasonSummary, StreakResponse } from "@/types";
+import type { Player, PlayerStats, PlayerTrackStats, HistoryEntry, RaceSubmission, ScoringConfig, Track, TracksOverview, SeasonInfo, SeasonPlayer, SeasonSummary, StreakResponse } from "@/types";
 
 export type SubmitResult = { player_id: string; position: number };
 
@@ -33,6 +33,8 @@ export const api = {
       }),
     stats: (id: string) =>
       apiFetch<PlayerStats>(`/api/players/${id}`),
+    trackStats: (id: string) =>
+      apiFetch<PlayerTrackStats>(`/api/players/${id}/tracks`),
     updateAvatar: (id: string, avatarUrl: string | null) =>
       apiFetch<Player>(`/api/players/${id}`, {
         method: "PATCH",
@@ -41,11 +43,11 @@ export const api = {
       }),
   },
   matches: {
-    submit: (results: SubmitResult[]) =>
+    submit: (results: SubmitResult[], races?: RaceSubmission[]) =>
       apiFetch<{ match_id: string }>("/api/matches", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ results }),
+        body: JSON.stringify({ results, races }),
       }),
     delete: (id: string) =>
       apiFetch<{ deleted: string }>(`/api/matches/${id}`, { method: "DELETE" }),
@@ -70,6 +72,12 @@ export const api = {
       apiFetch<SeasonSummary[]>("/api/seasons"),
     get: (yearMonth: string) =>
       apiFetch<{ ranking: SeasonPlayer[] }>(`/api/seasons/${yearMonth}`),
+  },
+  tracks: {
+    list: () =>
+      apiFetch<Track[]>("/api/tracks"),
+    overview: () =>
+      apiFetch<TracksOverview>("/api/tracks/overview"),
   },
   scoring: {
     get: () =>

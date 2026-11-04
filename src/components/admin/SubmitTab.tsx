@@ -2,12 +2,13 @@
 
 import { useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useSubmitFlow } from "@/hooks/useSubmitFlow";
+import { useSubmitFlow, type Step } from "@/hooks/useSubmitFlow";
 import LobbyStep from "./submit/LobbyStep";
+import RacesStep from "./submit/RacesStep";
 import PositionsStep from "./submit/PositionsStep";
 import SuccessStep from "./submit/SuccessStep";
 
-const STEP_LABELS = ["", "Lobby", "Positions"];
+const STEP_LABELS: Record<number, string> = { 1: "Lobby", 2: "Races", 3: "Positions" };
 
 export default function SubmitTab() {
   const flow = useSubmitFlow();
@@ -15,14 +16,18 @@ export default function SubmitTab() {
   const dir = flow.step > prevStep.current ? 1 : -1;
   prevStep.current = flow.step;
 
+  // The Races step only exists when race-by-race recording is on.
+  const steps: Step[] = flow.recordRaces ? [1, 2, 3] : [1, 3];
+  const racers = flow.players.filter((p) => flow.selected.has(p.id));
+
   return (
     <div>
-      {flow.step < 3 && (
+      {flow.step < 4 && (
         <div className="flex items-center gap-2 px-4 pt-4 pb-3">
-          {[1, 2].map((s) => (
+          {steps.map((s, i) => (
             <div key={s} className="flex items-center gap-2">
-              {s > 1 && (
-                <div className={`h-px w-5 transition-colors duration-300 ${flow.step > 1 ? "bg-[#00d4ff]" : "bg-[#222]"}`} />
+              {i > 0 && (
+                <div className={`h-px w-5 transition-colors duration-300 ${flow.step >= s ? "bg-[#00d4ff]" : "bg-[#222]"}`} />
               )}
               <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-200 ${
                 flow.step === s
@@ -31,7 +36,7 @@ export default function SubmitTab() {
                   ? "bg-[#00d4ff]/20 text-[#00d4ff]"
                   : "bg-[#1f1f1f] text-gray-600"
               }`}>
-                {flow.step > s ? "✓" : s}
+                {flow.step > s ? "✓" : i + 1}
               </div>
               <span className={`text-xs font-medium transition-colors ${flow.step === s ? "text-white" : "text-gray-600"}`}>
                 {STEP_LABELS[s]}
@@ -61,11 +66,28 @@ export default function SubmitTab() {
                 error={flow.fetchError}
                 selected={flow.selected}
                 onToggle={flow.toggleSelect}
-                onNext={flow.goToPositions}
+                recordRaces={flow.recordRaces}
+                onToggleRecordRaces={flow.setRecordRaces}
+                onNext={flow.recordRaces ? flow.startRaces : flow.goToPositions}
               />
             </div>
           )}
           {flow.step === 2 && (
+            <RacesStep
+              key={flow.raceIndex}
+              racers={racers}
+              tracks={flow.tracks}
+              races={flow.races}
+              raceIndex={flow.raceIndex}
+              onSelectRace={flow.setRaceIndex}
+              onSetTrack={flow.setRaceTrack}
+              onSetPosition={flow.setRacePosition}
+              onSetRaceCount={flow.setRaceCount}
+              onBack={() => flow.setStep(1)}
+              onFinish={flow.goToPositions}
+            />
+          )}
+          {flow.step === 3 && (
             <PositionsStep
               slots={flow.slots}
               playerById={flow.playerById}
@@ -75,10 +97,10 @@ export default function SubmitTab() {
               onPlacePlayer={flow.placePlayer}
               onClearPlayer={flow.clearPlayer}
               onSubmit={flow.submit}
-              onBack={() => flow.setStep(1)}
+              onBack={() => flow.setStep(flow.recordRaces ? 2 : 1)}
             />
           )}
-          {flow.step === 3 && <SuccessStep onReset={flow.reset} onRematch={flow.rematch} />}
+          {flow.step === 4 && <SuccessStep onReset={flow.reset} onRematch={flow.rematch} />}
         </motion.div>
       </AnimatePresence>
     </div>

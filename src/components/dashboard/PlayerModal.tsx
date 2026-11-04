@@ -6,6 +6,7 @@ import type { PlayerStats, SeasonKind, StatBlock } from "@/types";
 import AvatarDisplay from "@/components/AvatarDisplay";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { SeasonLineChart, SeasonEndChart } from "./PlayerCharts";
+import PlayerTracks from "./PlayerTracks";
 import { formatSeasonRating, formatSeasonDelta, deltaThreshold } from "@/lib/format";
 
 type View = "season" | "global";
@@ -32,6 +33,7 @@ export default function PlayerModal({ stats, playerName, streak, initialView, on
   const mobile = useIsMobile();
   const hasSeasonGames = (stats?.current_season.stats.gp ?? 0) > 0;
   const [view, setView] = useState<View>(initialView);
+  const [showTracks, setShowTracks] = useState(false);
   const effectiveView: View = stats && !hasSeasonGames ? "global" : view;
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -122,17 +124,21 @@ export default function PlayerModal({ stats, playerName, streak, initialView, on
           </div>
         ) : (
           <div className={`overflow-y-auto flex-1 min-h-0 ${mobile ? "px-4 pb-4" : "px-7 pb-6"}`}>
-            {/* Season / Global switch */}
+            {/* Season / Global / Tracks switch */}
             <div className="flex bg-black/50 border border-white/10 rounded-xl p-1 mb-5 self-start w-max">
-              {(["season", "global"] as const).map((v) => {
+              {(["season", "global", "tracks"] as const).map((v) => {
                 const disabled = v === "season" && !hasSeasonGames;
-                const active = effectiveView === v;
+                const active = v === "tracks" ? showTracks : !showTracks && effectiveView === v;
                 return (
                   <button
                     key={v}
                     disabled={disabled}
-                    onClick={() => { setView(v); resetTimeout(); }}
-                    className={`relative font-racing px-5 py-1.5 rounded-lg text-sm uppercase ${v === "global" ? "ml-1" : ""} ${
+                    onClick={() => {
+                      if (v === "tracks") setShowTracks(true);
+                      else { setShowTracks(false); setView(v); }
+                      resetTimeout();
+                    }}
+                    className={`relative font-racing ${mobile ? "px-3" : "px-5"} py-1.5 rounded-lg text-sm uppercase ${v !== "season" ? "ml-1" : ""} ${
                       active ? "text-white" : disabled ? "text-[#4b5563]" : "text-[#9ca3af]"
                     }`}
                   >
@@ -144,7 +150,7 @@ export default function PlayerModal({ stats, playerName, streak, initialView, on
                         transition={{ type: "spring", stiffness: 420, damping: 34 }}
                       />
                     )}
-                    <span className="relative">{v === "season" ? stats.current_season.month_name : "Global"}</span>
+                    <span className="relative">{v === "season" ? stats.current_season.month_name : v === "global" ? "Global" : "Tracks"}</span>
                   </button>
                 );
               })}
@@ -152,12 +158,16 @@ export default function PlayerModal({ stats, playerName, streak, initialView, on
 
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
-                key={effectiveView}
+                key={showTracks ? "tracks" : effectiveView}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.22, ease: "easeOut" }}
               >
+                {showTracks ? (
+                  <PlayerTracks playerId={stats.player.id} mobile={mobile} />
+                ) : (
+                <>
                 {/* Hero: rating + rank */}
                 <div className="flex items-end justify-between mb-5">
                   <div>
@@ -255,6 +265,8 @@ export default function PlayerModal({ stats, playerName, streak, initialView, on
                       );
                     })}
                   </div>
+                )}
+                </>
                 )}
               </motion.div>
             </AnimatePresence>

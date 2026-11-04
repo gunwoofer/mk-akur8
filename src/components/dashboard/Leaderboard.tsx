@@ -14,6 +14,7 @@ import GPRecapOverlay from "./GPRecapOverlay";
 import OvertakeOverlay from "./OvertakeOverlay";
 import SeasonProgressBar from "./SeasonProgressBar";
 import SeasonHistoryModal from "./SeasonHistoryModal";
+import TracksModal from "./TracksModal";
 
 export default function Leaderboard() {
   const {
@@ -28,6 +29,7 @@ export default function Leaderboard() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showInfo, setShowInfo] = useState(false);
   const [showSeasonHistory, setShowSeasonHistory] = useState(false);
+  const [showTracks, setShowTracks] = useState(false);
   const [statsCache, setStatsCache] = useState<Record<string, PlayerStats>>({});
   const mobile = useIsMobile();
 
@@ -90,6 +92,13 @@ export default function Leaderboard() {
               Past Seasons
             </button>
             <button
+              onClick={() => setShowTracks(true)}
+              className={`${headerButton} flex-1 mr-2`}
+              style={{ WebkitTapHighlightColor: "transparent" }}
+            >
+              Tracks
+            </button>
+            <button
               onClick={() => setShowInfo(true)}
               className={`${headerButton} flex-1`}
               style={{ WebkitTapHighlightColor: "transparent" }}
@@ -125,6 +134,13 @@ export default function Leaderboard() {
             style={{ WebkitTapHighlightColor: "transparent" }}
           >
             Past Seasons
+          </button>
+          <button
+            onClick={() => setShowTracks(true)}
+            className={`${headerButton} mr-2`}
+            style={{ WebkitTapHighlightColor: "transparent" }}
+          >
+            Tracks
           </button>
           <button
             onClick={() => setShowInfo(true)}
@@ -211,6 +227,9 @@ export default function Leaderboard() {
 
       <AnimatePresence>
         {showSeasonHistory && <SeasonHistoryModal onClose={() => setShowSeasonHistory(false)} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showTracks && <TracksModal onClose={() => setShowTracks(false)} />}
       </AnimatePresence>
 
       <AnimatePresence>
