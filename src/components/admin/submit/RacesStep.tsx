@@ -53,11 +53,6 @@ export default function RacesStep({
     setActivePlayer(next ?? null);
   };
 
-  const finishHere = () => {
-    if (raceIndex + 1 < races.length) onSetRaceCount(raceIndex + 1);
-    onFinish();
-  };
-
   return (
     <div className="px-4 pb-4">
       {/* Header */}
@@ -189,15 +184,6 @@ export default function RacesStep({
       <div className="sticky bottom-0 bg-[#0a0a0a] pt-3 pb-1 mt-3">
         {!isLast ? (
           <div className="flex">
-            {raceIndex + 1 >= MIN_RACES && complete && (
-              <button
-                onClick={finishHere}
-                disabled={!races.slice(0, raceIndex + 1).every((r) => isRaceComplete(r, racerIds))}
-                className="mr-2 px-4 py-3.5 rounded-2xl border border-[#2a2a2a] text-gray-300 text-sm font-semibold disabled:opacity-30"
-              >
-                End GP here
-              </button>
-            )}
             <motion.button
               onClick={() => onSelectRace(raceIndex + 1)}
               disabled={!complete}
