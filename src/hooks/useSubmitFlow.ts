@@ -29,6 +29,7 @@ interface Draft {
   races: RaceDraft[];
   raceIndex: number;
   step: Step;
+  slots?: Slot[];       // final ranking as arranged so far (step 3)
 }
 
 function emptySlots(): Slot[] {
@@ -95,7 +96,8 @@ export function useSubmitFlow() {
     if (recordRaces && tracks.length === 0) api.tracks.list().then(setTracks).catch(() => {});
   }, [recordRaces, tracks.length]);
 
-  // Pick a GP in progress back up after the phone locked or the page reloaded between races.
+  // Pick a GP in progress back up after the phone locked or the page reloaded — between races
+  // or on the final ranking (a pull-to-refresh while dragging is easy to trigger there).
   // Has to run after mount: localStorage doesn't exist during the server render.
   useEffect(() => {
     if (loadingPlayers || draftRestored) return;
@@ -110,13 +112,22 @@ export function useSubmitFlow() {
     setRecordRaces(true);
     setRaces(draft.races);
     setRaceIndex(Math.min(draft.raceIndex, draft.races.length - 1));
-    setStep(2);
+    if (draft.step === 3 && draft.slots) {
+      setSlots(draft.slots.map((s) => ({ ...s, playerIds: s.playerIds.filter((id) => known.has(id)) })));
+      setStep(3);
+    } else {
+      setStep(2);
+    }
   }, [loadingPlayers, draftRestored, players]);
 
+  // Kept until the GP is submitted (step 4) or the flow goes back to the lobby.
   useEffect(() => {
     if (!draftRestored) return;
-    writeDraft(recordRaces && step === 2 ? { selected: [...selected], races, raceIndex, step } : null);
-  }, [draftRestored, recordRaces, step, selected, races, raceIndex]);
+    const inProgress = recordRaces && (step === 2 || step === 3);
+    writeDraft(inProgress
+      ? { selected: [...selected], races, raceIndex, step, ...(step === 3 ? { slots } : {}) }
+      : null);
+  }, [draftRestored, recordRaces, step, selected, races, raceIndex, slots]);
 
   const toggleSelect = (id: string) =>
     setSelected((prev) => {
