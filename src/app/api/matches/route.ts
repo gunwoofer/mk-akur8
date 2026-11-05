@@ -41,13 +41,21 @@ export async function POST(req: NextRequest) {
 
   // Optional race-by-race details: informational only, never used by the Elo.
   const races: RaceSubmission[] | undefined = body.races;
+  const supabase = getServerSupabase();
   if (races !== undefined && races !== null) {
     const raceError = validateRaces(races, uniquePlayerIds);
     if (raceError) return NextResponse.json({ error: raceError }, { status: 400 });
+
+    const trackIds = [...new Set(races.map((r) => r.track_id))];
+    const { data: known, error: trackError } = await supabase.from("tracks").select("id").in("id", trackIds);
+    if (trackError) return NextResponse.json({ error: trackError.message }, { status: 500 });
+    if ((known ?? []).length !== trackIds.length) {
+      return NextResponse.json({ error: "Unknown track" }, { status: 400 });
+    }
   }
 
   // Saves the match, its results, its races and its frozen scores in one transaction.
-  const { data: matchId, error } = await getServerSupabase().rpc("submit_gp", {
+  const { data: matchId, error } = await supabase.rpc("submit_gp", {
     p_results: results.map(({ player_id, position }) => ({ player_id, position })),
     ...(races ? {
       p_races: races.map((r) => ({
