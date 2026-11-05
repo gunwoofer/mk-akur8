@@ -201,7 +201,7 @@ export interface PlayerTrackStats {
   best: TrackLine | null;        // best avg finish, min_races required
   worst: TrackLine | null;
   most_played: TrackLine | null;
-  tracks: TrackLine[];           // every track raced, best avg finish first
+  tracks: TrackLine[];           // every track raced, in the game's order
   min_races: number;
 }
 
@@ -213,7 +213,7 @@ export interface TrackOverview {
 }
 
 export interface TracksOverview {
-  tracks: TrackOverview[];       // most played first, unplayed last
+  tracks: TrackOverview[];       // the game's order
   hardest: string | null;        // track ids (min_races required)
   easiest: string | null;
   min_races: number;

@@ -35,7 +35,7 @@ export async function loadTracks(supabase: SupabaseClient): Promise<Track[]> {
 
   return ((data ?? []) as Omit<Track, "plays">[])
     .map((t) => ({ ...t, plays: plays.get(t.id) ?? 0 }))
-    .sort((a, b) => b.plays - a.plays || a.sort_order - b.sort_order);
+    .sort((a, b) => a.sort_order - b.sort_order);
 }
 
 export async function loadFinishes(supabase: SupabaseClient, playerId?: string): Promise<FinishRow[]> {

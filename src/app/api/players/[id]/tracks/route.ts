@@ -11,9 +11,12 @@ export async function GET(
   const supabase = getServerSupabase();
   try {
     const [tracks, finishes] = await Promise.all([loadTracks(supabase), loadFinishes(supabase, id)]);
+    const order = new Map(tracks.map((t) => [t.id, t.sort_order]));
     const lines = trackLines(finishes, new Map(tracks.map((t) => [t.id, t])))
+      .sort((a, b) => (order.get(a.track.id) ?? 0) - (order.get(b.track.id) ?? 0));
+    const eligible = lines
+      .filter((l) => l.races >= MIN_TRACK_RACES)
       .sort((a, b) => a.avg_finish - b.avg_finish || b.races - a.races);
-    const eligible = lines.filter((l) => l.races >= MIN_TRACK_RACES);
     const positions = finishes.map((f) => f.position);
 
     const body: PlayerTrackStats = {

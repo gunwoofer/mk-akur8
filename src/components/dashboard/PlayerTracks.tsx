@@ -49,7 +49,7 @@ export default function PlayerTracks({ playerId, mobile }: { playerId: string; m
       )}
       <div className="mb-5" />
 
-      <p className="text-[#9ca3af] text-xs uppercase tracking-widest mb-2">Every track · best average first</p>
+      <p className="text-[#9ca3af] text-xs uppercase tracking-widest mb-2">Every track</p>
       <div className="space-y-1.5">
         {stats.tracks.map((l) => (
           <div key={l.track.id} className="flex items-center rounded-xl border border-white/10 bg-white/[0.04] overflow-hidden">

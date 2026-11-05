@@ -80,7 +80,7 @@ export default function TracksModal({ onClose }: { onClose: () => void }) {
               )}
 
               <p className="text-[#9ca3af] text-xs uppercase tracking-widest mb-2">
-                Most played first · 👑 best average (min {data.min_races} races)
+                👑 best average (min {data.min_races} races)
               </p>
               <div className="space-y-1.5 mb-5">
                 {played.map((t) => (
