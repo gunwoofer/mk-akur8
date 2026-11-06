@@ -164,7 +164,6 @@ export default function GPMathModal({ initialScope, onClose }: { initialScope: S
 
 function PlayerCard({ p, k }: { p: GPBreakdownPlayer; k: number }) {
   const delta = p.after - p.before;
-  const surplus = p.duels.reduce((s, d) => s + d.result - d.expected, 0);
   const up = delta >= 0;
 
   return (
@@ -200,7 +199,14 @@ function PlayerCard({ p, k }: { p: GPBreakdownPlayer; k: number }) {
           <p className="text-[#9ca3af] text-xs py-1">Raced alone with bots: no duel, no change.</p>
         ) : (
           <p className="text-[#6b7280] text-[11px] pt-1 mt-1 border-t border-white/5 tabular-nums">
-            {k} ÷ {p.duels.length} × ({signed(surplus, 2)}) = <span className="text-[#cbd5e1] font-semibold">{signed(delta)}</span>
+            {k} ÷ {p.duels.length} × (
+            {p.duels.map((d, i) => {
+              const term = d.result - d.expected;
+              const abs = Math.abs(term).toFixed(2);
+              return i === 0 ? (term < 0 ? `−${abs}` : abs) : ` ${term < 0 ? "−" : "+"} ${abs}`;
+            }).join("")}
+            ) = <span className="text-[#cbd5e1] font-semibold">{signed(delta)}</span>
+            <span className="block text-[#6b7280] mt-0.5">each term = result − expected (1 ahead, 0 behind, 0.5 tie)</span>
           </p>
         )}
       </div>
