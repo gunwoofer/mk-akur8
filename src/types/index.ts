@@ -218,3 +218,39 @@ export interface TracksOverview {
   easiest: string | null;
   min_races: number;
 }
+
+export interface GPDuel {
+  opponent_id: string;
+  name: string;
+  their_rating: number;
+  result: number;                // 1 ahead, 0.5 same position, 0 behind
+  expected: number;
+  points: number;                // K / opponents × (result − expected)
+}
+
+export interface GPBreakdownPlayer {
+  player_id: string;
+  name: string;
+  character_avatar: string;
+  avatar_url: string | null;
+  position: number;
+  before: number;
+  after: number;                 // as stored in the ledger
+  duels: GPDuel[];
+}
+
+export interface GPBreakdownScope {
+  players: GPBreakdownPlayer[];  // finish order
+  exact: boolean;                // false when the GP was scored with other settings than today's
+}
+
+export interface GPBreakdown {
+  match_id: string;
+  played_at: string;
+  offset: number;                // 0 = latest GP
+  total: number;
+  k: number;
+  scale: number;
+  season: GPBreakdownScope | null;   // null when not scored with Elo
+  global: GPBreakdownScope | null;
+}

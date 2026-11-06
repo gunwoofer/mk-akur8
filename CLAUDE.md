@@ -123,6 +123,7 @@ src/
       matches/[id]/route.ts     # DELETE (rpc delete_gp — re-scores later GPs)
       history/route.ts          # GET (paginated match history)
       scoring/route.ts          # GET (points table + priors from the DB)
+      gp-breakdown/route.ts     # GET ?offset=N — per-duel Elo math of the N-th latest GP (replayed from the ledger)
 
   components/
     dashboard/
@@ -130,6 +131,7 @@ src/
       CelebrationOverlay.tsx    # GP winner celebration modal + fireworks
       PlayerModal.tsx           # Player stats modal (slide-up)
       RankingInfoModal.tsx      # Points table explainer modal
+      GPMathModal.tsx           # "GP Math": every duel of a GP (expected, result, points), season/global
     admin/
       SubmitTab.tsx             # Thin orchestrator — just wires useSubmitFlow to steps
       PlayersTab.tsx            # Add / delete players

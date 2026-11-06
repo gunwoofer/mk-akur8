@@ -15,6 +15,7 @@ import OvertakeOverlay from "./OvertakeOverlay";
 import SeasonProgressBar from "./SeasonProgressBar";
 import SeasonHistoryModal from "./SeasonHistoryModal";
 import TracksModal from "./TracksModal";
+import GPMathModal from "./GPMathModal";
 
 export default function Leaderboard() {
   const {
@@ -30,6 +31,7 @@ export default function Leaderboard() {
   const [showInfo, setShowInfo] = useState(false);
   const [showSeasonHistory, setShowSeasonHistory] = useState(false);
   const [showTracks, setShowTracks] = useState(false);
+  const [showMath, setShowMath] = useState(false);
   const [statsCache, setStatsCache] = useState<Record<string, PlayerStats>>({});
   const mobile = useIsMobile();
 
@@ -83,24 +85,31 @@ export default function Leaderboard() {
               </p>
             )}
           </div>
-          <div className="flex mt-3">
+          <div className="grid grid-cols-2 gap-2 mt-3">
             <button
               onClick={() => setShowSeasonHistory(true)}
-              className={`${headerButton} flex-1 mr-2`}
+              className={headerButton}
               style={{ WebkitTapHighlightColor: "transparent" }}
             >
               Past Seasons
             </button>
             <button
               onClick={() => setShowTracks(true)}
-              className={`${headerButton} flex-1 mr-2`}
+              className={headerButton}
               style={{ WebkitTapHighlightColor: "transparent" }}
             >
               Tracks
             </button>
             <button
+              onClick={() => setShowMath(true)}
+              className={headerButton}
+              style={{ WebkitTapHighlightColor: "transparent" }}
+            >
+              GP Math
+            </button>
+            <button
               onClick={() => setShowInfo(true)}
-              className={`${headerButton} flex-1`}
+              className={headerButton}
               style={{ WebkitTapHighlightColor: "transparent" }}
             >
               Ranking System
@@ -141,6 +150,13 @@ export default function Leaderboard() {
             style={{ WebkitTapHighlightColor: "transparent" }}
           >
             Tracks
+          </button>
+          <button
+            onClick={() => setShowMath(true)}
+            className={`${headerButton} mr-2`}
+            style={{ WebkitTapHighlightColor: "transparent" }}
+          >
+            GP Math
           </button>
           <button
             onClick={() => setShowInfo(true)}
@@ -230,6 +246,9 @@ export default function Leaderboard() {
       </AnimatePresence>
       <AnimatePresence>
         {showTracks && <TracksModal onClose={() => setShowTracks(false)} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showMath && <GPMathModal initialScope={isSeason ? "season" : "global"} onClose={() => setShowMath(false)} />}
       </AnimatePresence>
 
       <AnimatePresence>

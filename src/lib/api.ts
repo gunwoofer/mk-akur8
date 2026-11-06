@@ -1,4 +1,4 @@
-import type { Player, PlayerStats, PlayerTrackStats, HistoryEntry, RaceSubmission, ScoringConfig, Track, TracksOverview, SeasonInfo, SeasonPlayer, SeasonSummary, StreakResponse } from "@/types";
+import type { GPBreakdown, Player, PlayerStats, PlayerTrackStats, HistoryEntry, RaceSubmission, ScoringConfig, Track, TracksOverview, SeasonInfo, SeasonPlayer, SeasonSummary, StreakResponse } from "@/types";
 
 export type SubmitResult = { player_id: string; position: number };
 
@@ -78,6 +78,10 @@ export const api = {
       apiFetch<Track[]>("/api/tracks"),
     overview: () =>
       apiFetch<TracksOverview>("/api/tracks/overview"),
+  },
+  gp: {
+    breakdown: (offset = 0) =>
+      apiFetch<GPBreakdown | null>(`/api/gp-breakdown?offset=${offset}`),
   },
   scoring: {
     get: () =>
