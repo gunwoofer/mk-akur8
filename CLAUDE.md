@@ -9,7 +9,7 @@ Office Mario Kart grand prix tracker. Two separate UIs served from one Next.js a
 - **`/dashboard`** — TV/big screen leaderboard. Live-updating, read-only. Designed to run full-screen all day.
 - **`/admin`** — Mobile web app. Submit GP results, manage players, view history. Phone-sized layout (`max-w-md`).
 
-No auth, no multi-tenancy. Small office tool. Simplicity over robustness.
+No user accounts, no multi-tenancy — the admin is behind one shared code (see Admin lock). Small office tool. Simplicity over robustness.
 
 ---
 
@@ -36,7 +36,14 @@ All three must be set in `.env.local`:
 NEXT_PUBLIC_SUPABASE_URL=        # public, used client-side and server-side
 NEXT_PUBLIC_SUPABASE_ANON_KEY=   # public, used client-side and server-side
 SUPABASE_SERVICE_ROLE_KEY=       # server-only, bypasses RLS; falls back to anon if absent
+ADMIN_CODE=                      # the code typed on /login (case-insensitive)
+ADMIN_SESSION_SECRET=            # signs the 90-day admin cookie; changing it signs everyone out
 ```
+
+## Admin lock
+
+No auth, but **no anonymous writes**: `/admin` and every API route that writes (POST/PATCH/DELETE) need the `mk_admin` cookie, a signed expiry date set by `POST /api/auth/login` after the shared admin code (`src/lib/admin-auth.ts`). Checked twice: `src/proxy.ts` (Next 16's renamed middleware) and `requireAdmin(req)` at the top of each write route — **add it to every new write route**. Reads, the dashboard and realtime stay public.
+The public anon key ships to every browser, so it is **read-only** at the database level (migration `20261106_lock_public_writes`: write grants revoked, old anon write policies set to `false`, avatar uploads go through `POST /api/players/[id]/avatar`). Never add an anon write policy or grant back.
 
 ---
 
@@ -205,7 +212,7 @@ api.history.list({ limit?, offset? })  // pagination: limit≤50, offset≥0
 ```
 
 ### Supabase clients
-- **Client components / hooks:** `getSupabase()` — lazy singleton, uses public anon key, for realtime subscriptions and nothing else.
+- **Client components / hooks:** `getSupabase()` — lazy singleton, uses public anon key (read-only), for realtime subscriptions and nothing else.
 - **API routes:** `getServerSupabase()` — new instance per request, uses service role key (bypasses RLS). Never import the client singleton in API routes.
 
 ### Supabase join type workaround

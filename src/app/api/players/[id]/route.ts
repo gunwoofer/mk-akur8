@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase-server";
+import { requireAdmin } from "@/lib/admin-auth";
 import { fetchAll } from "@/lib/fetch-all";
 import { rankedPlayers } from "@/lib/players";
 import {
@@ -11,6 +12,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
   const { id } = await params;
   const body = await req.json() as { avatar_url?: string | null; archived?: boolean };
   const update: { avatar_url?: string | null; archived_at?: string | null } = {};
@@ -34,9 +37,11 @@ export async function PATCH(
 // A player who has raced is archived instead of deleted: deleting would cascade
 // through their results and rewrite every GP and season they played in.
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
   const { id } = await params;
   const supabase = getServerSupabase();
 

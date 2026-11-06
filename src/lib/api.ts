@@ -4,6 +4,10 @@ export type SubmitResult = { player_id: string; position: number };
 
 async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, options);
+  // The admin session expired or was never opened: back to the code screen.
+  if (res.status === 401 && typeof window !== "undefined" && url !== "/api/auth/login") {
+    window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({})) as { error?: string };
     throw new Error(body.error ?? `Request failed: ${res.status}`);
@@ -35,6 +39,12 @@ export const api = {
       apiFetch<PlayerStats>(`/api/players/${id}`),
     trackStats: (id: string) =>
       apiFetch<PlayerTrackStats>(`/api/players/${id}/tracks`),
+    uploadAvatar: (id: string, photo: Blob) =>
+      apiFetch<Player>(`/api/players/${id}/avatar`, {
+        method: "POST",
+        headers: { "Content-Type": "image/jpeg" },
+        body: photo,
+      }),
     updateAvatar: (id: string, avatarUrl: string | null) =>
       apiFetch<Player>(`/api/players/${id}`, {
         method: "PATCH",
@@ -82,6 +92,14 @@ export const api = {
   gp: {
     breakdown: (offset = 0) =>
       apiFetch<GPBreakdown | null>(`/api/gp-breakdown?offset=${offset}`),
+  },
+  auth: {
+    login: (code: string) =>
+      apiFetch<{ ok: true }>("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      }),
   },
   scoring: {
     get: () =>

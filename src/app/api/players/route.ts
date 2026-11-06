@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase-server";
+import { requireAdmin } from "@/lib/admin-auth";
 import { rankedPlayers } from "@/lib/players";
 
 // ?archived=1 lists archived players instead of active ones.
@@ -13,6 +14,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
   const body = await req.json().catch(() => null);
   if (!body?.name?.trim()) {
     return NextResponse.json({ error: "name is required" }, { status: 400 });

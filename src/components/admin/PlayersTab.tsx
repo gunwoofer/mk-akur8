@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
-import { getSupabase } from "@/lib/supabase";
 import type { Player } from "@/types";
 import AvatarDisplay from "@/components/AvatarDisplay";
 import { formatPlayerRating, ratingUnit } from "@/lib/format";
@@ -105,17 +104,8 @@ export default function PlayersTab() {
 
     setUploadingId(player.id);
     try {
-      const supabase = getSupabase();
-      const path = `${player.id}.jpg`;
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(path, blob, { contentType: "image/jpeg", upsert: true });
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-      const url = `${data.publicUrl}?t=${Date.now()}`;
-      await api.players.updateAvatar(player.id, url);
-      setPlayers((prev) => prev.map((p) => p.id === player.id ? { ...p, avatar_url: url } : p));
+      const updated = await api.players.uploadAvatar(player.id, blob);
+      setPlayers((prev) => prev.map((p) => p.id === player.id ? { ...p, avatar_url: updated.avatar_url } : p));
     } catch {
       // silent — player still works with emoji fallback
     } finally {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase-server";
+import { requireAdmin } from "@/lib/admin-auth";
 import type { RaceSubmission } from "@/types";
 
 function validateRaces(races: unknown, gpPlayers: Set<string>): string | null {
@@ -19,6 +20,8 @@ function validateRaces(races: unknown, gpPlayers: Set<string>): string | null {
 }
 
 export async function POST(req: NextRequest) {
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
   const body = await req.json().catch(() => null);
 
   if (!body || !Array.isArray(body.results) || body.results.length === 0) {
