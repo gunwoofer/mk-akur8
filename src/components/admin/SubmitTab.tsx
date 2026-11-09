@@ -8,7 +8,7 @@ import RacesStep from "./submit/RacesStep";
 import PositionsStep from "./submit/PositionsStep";
 import SuccessStep from "./submit/SuccessStep";
 
-const STEP_LABELS: Record<number, string> = { 1: "Lobby", 2: "Races", 3: "Positions" };
+const STEP_LABELS: Record<number, string> = { 1: "Lobby", 2: "Races", 3: "Ranking" };
 
 export default function SubmitTab() {
   const flow = useSubmitFlow();
@@ -89,13 +89,13 @@ export default function SubmitTab() {
           )}
           {flow.step === 3 && (
             <PositionsStep
-              slots={flow.slots}
-              playerById={flow.playerById}
-              placedIds={flow.placedIds}
+              racers={racers}
+              ranking={flow.ranking}
+              prefilled={flow.recordRaces}
+              backLabel={flow.recordRaces ? "Races" : "Lobby"}
               submitting={flow.submitting}
               submitError={flow.submitError}
-              onPlacePlayer={flow.placePlayer}
-              onClearPlayer={flow.clearPlayer}
+              onSetPosition={flow.setFinalPosition}
               onSubmit={flow.submit}
               onBack={() => flow.setStep(flow.recordRaces ? 2 : 1)}
             />

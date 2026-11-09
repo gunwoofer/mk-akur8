@@ -9,11 +9,6 @@ import type { Player, RaceSubmission, Track } from "@/types";
 // 1 Lobby → 2 Races (only when recording races) → 3 Final ranking → 4 Done
 export type Step = 1 | 2 | 3 | 4;
 
-export interface Slot {
-  position: number;
-  playerIds: string[];
-}
-
 export interface RaceDraft {
   trackId: string | null;
   positions: Record<string, number>;   // player id → finish position (1–24)
@@ -29,11 +24,7 @@ interface Draft {
   races: RaceDraft[];
   raceIndex: number;
   step: Step;
-  slots?: Slot[];       // final ranking as arranged so far (step 3)
-}
-
-function emptySlots(): Slot[] {
-  return Array.from({ length: 24 }, (_, i) => ({ position: i + 1, playerIds: [] }));
+  ranking?: Record<string, number>;   // final ranking entered so far (step 3)
 }
 
 const emptyRace = (): RaceDraft => ({ trackId: null, positions: {} });
@@ -67,10 +58,10 @@ export function useSubmitFlow() {
   const [loadingPlayers, setLoadingPlayers] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [slots, setSlots] = useState<Slot[]>(emptySlots);
+  // Final GP position of each racer; several racers may share one.
+  const [ranking, setRanking] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [lastResults, setLastResults] = useState<Slot[]>([]);
 
   const [recordRaces, setRecordRaces] = useState(false);
   const [races, setRaces] = useState<RaceDraft[]>([]);
@@ -97,7 +88,7 @@ export function useSubmitFlow() {
   }, [recordRaces, tracks.length]);
 
   // Pick a GP in progress back up after the phone locked or the page reloaded — between races
-  // or on the final ranking (a pull-to-refresh while dragging is easy to trigger there).
+  // or on the final ranking.
   // Has to run after mount: localStorage doesn't exist during the server render.
   useEffect(() => {
     if (loadingPlayers || draftRestored) return;
@@ -112,8 +103,8 @@ export function useSubmitFlow() {
     setRecordRaces(true);
     setRaces(draft.races);
     setRaceIndex(Math.min(draft.raceIndex, draft.races.length - 1));
-    if (draft.step === 3 && draft.slots) {
-      setSlots(draft.slots.map((s) => ({ ...s, playerIds: s.playerIds.filter((id) => known.has(id)) })));
+    if (draft.step === 3 && draft.ranking) {
+      setRanking(Object.fromEntries(Object.entries(draft.ranking).filter(([id]) => ids.includes(id))));
       setStep(3);
     } else {
       setStep(2);
@@ -125,9 +116,9 @@ export function useSubmitFlow() {
     if (!draftRestored) return;
     const inProgress = recordRaces && (step === 2 || step === 3);
     writeDraft(inProgress
-      ? { selected: [...selected], races, raceIndex, step, ...(step === 3 ? { slots } : {}) }
+      ? { selected: [...selected], races, raceIndex, step, ...(step === 3 ? { ranking } : {}) }
       : null);
-  }, [draftRestored, recordRaces, step, selected, races, raceIndex, slots]);
+  }, [draftRestored, recordRaces, step, selected, races, raceIndex, ranking]);
 
   const toggleSelect = (id: string) =>
     setSelected((prev) => {
@@ -135,26 +126,6 @@ export function useSubmitFlow() {
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
-
-  // Remove player from current slot, then add to target slot.
-  // If target already has players, they tie at that position.
-  const placePlayer = (playerId: string, targetPosition: number) =>
-    setSlots((prev) => {
-      const withoutPlayer = prev.map((s) => ({
-        ...s,
-        playerIds: s.playerIds.filter((id) => id !== playerId),
-      }));
-      return withoutPlayer.map((s) =>
-        s.position === targetPosition
-          ? { ...s, playerIds: [...s.playerIds, playerId] }
-          : s
-      );
-    });
-
-  const clearPlayer = (playerId: string) =>
-    setSlots((prev) =>
-      prev.map((s) => ({ ...s, playerIds: s.playerIds.filter((id) => id !== playerId) }))
-    );
 
   /* ── Race-by-race entry ───────────────────────────────────────────────── */
 
@@ -194,12 +165,10 @@ export function useSubmitFlow() {
 
   /* ── Final ranking ────────────────────────────────────────────────────── */
 
-  // Pre-fill positions 1…N. With recorded races: by total race points (Mario Kart World
-  // scale), ties to the better last race. Otherwise by current rating.
+  // With recorded races: pre-filled 1…N by total race points (Mario Kart World scale),
+  // ties to the better last race. Without: left empty — a guessed order is easy to submit by mistake.
   const goToPositions = useCallback(() => {
     const chosen = players.filter((p) => selected.has(p.id));
-    let ordered: Player[];
-    // "End GP here" trims the race list in the same tick: only count races with a track.
     const played = races.filter((r) => r.trackId !== null);
     if (recordRaces && played.length > 0) {
       const points = (id: string) => played.reduce((sum, r) => {
@@ -207,26 +176,26 @@ export function useSubmitFlow() {
         return sum + (pos ? RACE_POINTS[pos - 1] ?? 0 : 0);
       }, 0);
       const lastPos = (id: string) => played[played.length - 1]?.positions[id] ?? 99;
-      ordered = [...chosen].sort((a, b) => points(b.id) - points(a.id) || lastPos(a.id) - lastPos(b.id));
+      const ordered = [...chosen].sort((a, b) => points(b.id) - points(a.id) || lastPos(a.id) - lastPos(b.id));
+      setRanking(Object.fromEntries(ordered.map((p, i) => [p.id, i + 1])));
     } else {
-      ordered = [...chosen].sort((a, b) => b.rating - a.rating);
+      setRanking({});
     }
-    setSlots(
-      Array.from({ length: 24 }, (_, i) => ({
-        position: i + 1,
-        playerIds: ordered[i] ? [ordered[i].id] : [],
-      }))
-    );
     setStep(3);
   }, [players, selected, recordRaces, races]);
 
-  const submit = async (): Promise<boolean> => {
-    const results = slots.flatMap((s) =>
-      s.playerIds.map((id) => ({ player_id: id, position: s.position }))
-    );
+  const setFinalPosition = (playerId: string, position: number | null) =>
+    setRanking((prev) => {
+      const next = { ...prev };
+      if (position === null) delete next[playerId];
+      else next[playerId] = position;
+      return next;
+    });
 
-    if (results.length === 0) {
-      setSubmitError("Place at least one player before submitting.");
+  const submit = async (): Promise<boolean> => {
+    const results = [...selected].map((id) => ({ player_id: id, position: ranking[id] }));
+    if (results.length === 0 || results.some((r) => r.position === undefined)) {
+      setSubmitError("Give every racer a position before submitting.");
       return false;
     }
 
@@ -244,11 +213,9 @@ export function useSubmitFlow() {
 
       // DB is fully committed at this point. Push winner(s) to the dashboard immediately
       // via Supabase broadcast — no polling lag, no dependency on postgres_changes.
-      const winnerSlot = slots
-        .filter((s) => s.playerIds.length > 0)
-        .sort((a, b) => a.position - b.position)[0];
-      const winners = (winnerSlot?.playerIds ?? [])
-        .map((id) => players.find((p) => p.id === id))
+      const best = Math.min(...results.map((r) => r.position));
+      const winners = results.filter((r) => r.position === best)
+        .map((r) => players.find((p) => p.id === r.player_id))
         .filter((p): p is Player => p !== null)
         .map(({ name, character_avatar, avatar_url }) => ({ name, character_avatar, avatar_url }));
       if (winners.length > 0) {
@@ -266,7 +233,6 @@ export function useSubmitFlow() {
         });
       }
 
-      setLastResults(slots.filter((s) => s.playerIds.length > 0));
       setRaces([]);
       setRaceIndex(0);
       setStep(4);
@@ -279,45 +245,35 @@ export function useSubmitFlow() {
     }
   };
 
-  // Same racers and final order; races (if recorded) start fresh.
+  // Same racers; positions (and races, if recorded) start fresh.
   const rematch = useCallback(() => {
-    setSlots(
-      Array.from({ length: 24 }, (_, i) => {
-        const last = lastResults.find((s) => s.position === i + 1);
-        return { position: i + 1, playerIds: last?.playerIds ?? [] };
-      })
-    );
+    setRanking({});
+    setSubmitError(null);
     if (recordRaces) {
-      setSelected(new Set(lastResults.flatMap((s) => s.playerIds)));
       setRaces(Array.from({ length: DEFAULT_RACES }, emptyRace));
       setRaceIndex(0);
       setStep(2);
     } else {
       setStep(3);
     }
-  }, [lastResults, recordRaces]);
+  }, [recordRaces]);
 
   const reset = () => {
     setSelected(new Set());
-    setSlots(emptySlots());
-    setLastResults([]);
+    setRanking({});
     setRaces([]);
     setRaceIndex(0);
     setStep(1);
     setSubmitError(null);
   };
 
-  const placedIds = new Set(slots.flatMap((s) => s.playerIds));
-
   return {
     step, setStep, goToPositions,
     players, loadingPlayers, fetchError,
     selected, toggleSelect,
-    slots, placePlayer, clearPlayer,
+    ranking, setFinalPosition,
     submitting, submitError,
     submit, reset, rematch,
-    placedIds,
-    playerById: (id: string) => players.find((p) => p.id === id) ?? null,
     recordRaces, setRecordRaces,
     races, raceIndex, setRaceIndex, tracks,
     startRaces, setRaceTrack, setRacePosition, setRaceCount,

@@ -1,119 +1,90 @@
 "use client";
 
 import { useState } from "react";
-import {
-  DndContext, DragEndEvent, DragStartEvent,
-  DragOverlay, PointerSensor, TouchSensor,
-  useSensor, useSensors,
-} from "@dnd-kit/core";
 import { motion } from "framer-motion";
-import type { Slot } from "@/hooks/useSubmitFlow";
 import type { Player } from "@/types";
 import AvatarDisplay from "@/components/AvatarDisplay";
-import PositionSlot from "./PositionSlot";
+import PositionRows from "./PositionRows";
 
 interface Props {
-  slots: Slot[];
-  playerById: (id: string) => Player | null;
-  placedIds: Set<string>;
+  racers: Player[];
+  ranking: Record<string, number>;
+  prefilled: boolean;
+  backLabel: string;
   submitting: boolean;
   submitError: string | null;
-  onPlacePlayer: (playerId: string, position: number) => void;
-  onClearPlayer: (playerId: string) => void;
+  onSetPosition: (playerId: string, position: number | null) => void;
   onSubmit: () => void;
   onBack: () => void;
 }
 
 export default function PositionsStep({
-  slots, playerById,
-  placedIds, submitting, submitError,
-  onPlacePlayer, onClearPlayer, onSubmit, onBack,
+  racers, ranking, prefilled, backLabel, submitting, submitError, onSetPosition, onSubmit, onBack,
 }: Props) {
-  const [activePlayerId, setActivePlayerId] = useState<string | null>(null);
+  // Mounted on entering the step: open the keypad on the first racer without a position.
+  const [activePlayer, setActivePlayer] = useState<string | null>(() =>
+    racers.find((p) => ranking[p.id] === undefined)?.id ?? null);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 100, tolerance: 8 } })
-  );
+  const placed = racers.filter((p) => ranking[p.id] !== undefined);
+  const complete = placed.length === racers.length && racers.length > 0;
+  const order = [...placed].sort((a, b) => ranking[a.id] - ranking[b.id]);
+  const shared = (pos: number) => placed.filter((p) => ranking[p.id] === pos).length > 1;
 
-  function handleDragStart(e: DragStartEvent) {
-    setActivePlayerId(e.active.data.current?.playerId as string ?? null);
-  }
-
-  function handleDragEnd(e: DragEndEvent) {
-    setActivePlayerId(null);
-    const overId = e.over?.id as string | undefined;
-    const playerId = e.active.data.current?.playerId as string | undefined;
-    if (!overId?.startsWith("slot-") || !playerId) return;
-    onPlacePlayer(playerId, parseInt(overId.replace("slot-", ""), 10));
-  }
-
-  const activePlayer = activePlayerId ? playerById(activePlayerId) : null;
+  const pick = (playerId: string, position: number) => {
+    onSetPosition(playerId, ranking[playerId] === position ? null : position);
+    const next = racers.find((p) => p.id !== playerId && ranking[p.id] === undefined);
+    setActivePlayer(next?.id ?? null);
+  };
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div>
-        {/* Header */}
-        <div className="px-4 pt-2 pb-3 flex items-center gap-3">
-          <button
-            onClick={onBack}
-            className="text-gray-600 hover:text-white text-sm transition-colors"
-          >
-            ← Back
-          </button>
-          <div className="flex-1">
-            <h2 className="text-white font-bold text-base leading-none">Assign Positions</h2>
-            <p className="text-gray-600 text-xs mt-0.5">Drag to move · drop on player to tie · tap ✕ to remove</p>
-          </div>
-          <div className="text-right">
-            <p className="text-[#00d4ff] text-sm font-bold leading-none">{placedIds.size}</p>
-            <p className="text-gray-700 text-[10px]">placed</p>
-          </div>
-        </div>
-
-        {/* Slot list */}
-        <div className="px-4 pb-2 space-y-0.5">
-          {slots.map((slot) => (
-            <PositionSlot
-              key={slot.position}
-              position={slot.position}
-              players={slot.playerIds.map((id) => playerById(id)).filter((p): p is Player => p !== null)}
-              onClearPlayer={onClearPlayer}
-            />
-          ))}
-        </div>
-
-        {/* Sticky footer */}
-        <div className="sticky bottom-0 bg-[#0a0a0a]/95 border-t border-[#181818] px-4 pt-3 pb-4 space-y-3">
-          {submitError && (
-            <p className="text-red-400 text-xs text-center">{submitError}</p>
-          )}
-          <motion.button
-            onClick={onSubmit}
-            disabled={submitting || placedIds.size === 0}
-            whileTap={{ scale: 0.98 }}
-            className="w-full py-3.5 bg-[#00d4ff] text-black font-bold text-sm rounded-2xl disabled:opacity-30 transition-opacity tracking-wide"
-          >
-            {submitting
-              ? "Submitting…"
-              : `Submit GP · ${placedIds.size} racer${placedIds.size !== 1 ? "s" : ""} 🏁`}
-          </motion.button>
-        </div>
+    <div className="px-4 pb-4">
+      <div className="flex items-center justify-between pt-1 pb-3">
+        <button onClick={onBack} className="text-gray-500 text-sm">← {backLabel}</button>
+        <span className="text-gray-500 text-xs tabular-nums">{placed.length} / {racers.length} placed</span>
       </div>
 
-      <DragOverlay dropAnimation={null}>
-        {activePlayer && (
-          <div className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl border border-[#00d4ff]/60 bg-[#00d4ff]/15 shadow-xl shadow-[#00d4ff]/10">
-            <AvatarDisplay
-              avatarUrl={activePlayer.avatar_url}
-              characterAvatar={activePlayer.character_avatar}
-              imgClassName="w-5 h-5"
-              emojiClassName="text-base leading-none"
-            />
-            <span className="text-white text-xs font-bold">{activePlayer.name}</span>
+      <h2 className="text-white font-bold text-lg leading-none">Final ranking</h2>
+      <p className="text-gray-600 text-xs mt-1 mb-3">
+        {prefilled ? "Pre-filled from the race points — check and adjust. " : ""}
+        GP position (1–24) · players can share a spot
+      </p>
+
+      <PositionRows
+        racers={racers}
+        positions={ranking}
+        activePlayer={activePlayer}
+        onToggle={(id) => setActivePlayer(activePlayer === id ? null : id)}
+        onPick={pick}
+        allowTies
+      />
+
+      <div className="sticky bottom-0 bg-[#0a0a0a] pt-3 pb-1 mt-3">
+        {order.length > 0 && (
+          <div className="flex flex-wrap items-center mb-3">
+            {order.map((p) => {
+              const pos = ranking[p.id];
+              return (
+                <span key={p.id} className="flex items-center mr-3 mb-1 text-xs">
+                  <span className="text-[#00d4ff] font-black tabular-nums mr-1">
+                    {pos === 1 ? "🥇" : `P${pos}${shared(pos) ? "=" : ""}`}
+                  </span>
+                  <AvatarDisplay avatarUrl={p.avatar_url} characterAvatar={p.character_avatar} imgClassName="w-4 h-4 mr-1" emojiClassName="text-sm mr-1" />
+                  <span className="text-white font-semibold">{p.name}</span>
+                </span>
+              );
+            })}
           </div>
         )}
-      </DragOverlay>
-    </DndContext>
+        {submitError && <p className="text-red-400 text-xs text-center mb-2">{submitError}</p>}
+        <motion.button
+          onClick={onSubmit}
+          disabled={submitting || !complete}
+          whileTap={{ scale: 0.98 }}
+          className="w-full py-3.5 bg-[#00d4ff] text-black font-bold text-sm rounded-2xl disabled:opacity-30 tracking-wide"
+        >
+          {submitting ? "Submitting…" : complete ? `Submit GP · ${racers.length} racers 🏁` : "Give everyone a position"}
+        </motion.button>
+      </div>
+    </div>
   );
 }

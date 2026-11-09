@@ -20,7 +20,6 @@ No user accounts, no multi-tenancy — the admin is behind one shared code (see 
 | Framework | Next.js 16.2.6, App Router, `src/` layout |
 | UI | React 19, Tailwind CSS v4 (`@import "tailwindcss"` — not v3 syntax) |
 | Animation | Framer Motion v12 |
-| Drag-and-drop | `@dnd-kit/core` v6 |
 | Database | Supabase (Postgres + realtime) |
 | Type checking | TypeScript strict mode |
 
@@ -144,11 +143,11 @@ src/
       PlayersTab.tsx            # Add / delete players
       ResultsTab.tsx            # Rankings + paginated history
       submit/
-        LobbyStep.tsx           # Step 1: select who raced
-        PositionsStep.tsx       # Step 2: DnD positions (wraps DndContext)
-        SuccessStep.tsx         # Step 3: confirmation screen
-        PositionSlot.tsx        # Single slot — both droppable AND draggable
-        DraggablePlayer.tsx     # Bench chip — draggable only
+        LobbyStep.tsx           # Step 1: select who raced (+ "Record each race" toggle)
+        RacesStep.tsx           # Step 2 (optional): track + position of each racer, race by race
+        PositionsStep.tsx       # Step 3: final GP ranking with the keypad (ties allowed) → submit
+        PositionRows.tsx        # Player rows + 1–24 keypad, shared by steps 2 and 3
+        SuccessStep.tsx         # Done screen
 
   hooks/
     useLeaderboard.ts           # All dashboard state: players, realtime, celebrations
@@ -187,10 +186,11 @@ The 800 ms debounce lets all realtime events of a submission settle before fetch
 ```
 useSubmitFlow
   step 1 (LobbyStep):   select which players raced → Set<playerId>
-  step 2 (PositionsStep): drag-and-drop into 24 slots → POST /api/matches
+  step 2 (RacesStep):   optional, race by race
+  step 3 (PositionsStep): GP position of each racer on a keypad (shared spots allowed) → POST /api/matches
                           → after API returns, broadcast "gp_submitted" on
                             "leaderboard-live" channel so dashboard celebrates instantly
-  step 3 (SuccessStep):  confirmation
+  step 4 (SuccessStep):  confirmation
 ```
 
 The broadcast happens _after_ `api.matches.submit()` resolves, meaning the DB is fully committed. This eliminates the race where the dashboard fetches and sees empty `race_results`.
@@ -250,7 +250,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 Two refs drive this: `liveRanksRef` is overwritten on every settled fetch (always current); `frozenBaselineRef` is only updated when a new committed GP is detected — it captures `liveRanksRef` at that moment (pre-GP ranks). Deltas are calculated as `frozenBaselineRef[id] - newRank`, so they persist across polling cycles until the next GP arrives.
 
 ### `useSubmitFlow.goToPositions`
-Call this instead of `setStep(2)` directly. It pre-fills the 24 slots with selected players sorted by current rating descending (best player in slot 1, etc.) so the admin only needs to make small adjustments for a typical race result. `benchPlayers` is derived from `selected` minus `placedIds`.
+Call this instead of `setStep(3)` directly. With recorded races it pre-fills the final ranking 1…N from the race points; without, the ranking starts empty (a guessed order is too easy to submit by mistake). The ranking is `Record<playerId, position>`; Submit stays disabled until every racer has one.
 
 ### Celebration trigger
 `lastMatchIdRef` stores the UUID of the last match displayed. On each `doFetch`:
@@ -259,13 +259,6 @@ Call this instead of `setStep(2)` directly. It pre-fills the 24 slots with selec
 3. Use functional setState `prev => prev ?? winner` to prevent double-fire from concurrent calls.
 
 `HistoryEntry.results` is returned pre-sorted by position ASC (best finisher first) — `results[0]` is always the race winner.
-
-### DnD slots — dual role
-`PositionSlot` combines `useDraggable` and `useDroppable` on the same element. The ref must be merged manually:
-```ts
-const setRef = (el: HTMLElement | null) => { setDropRef(el); setDragRef(el); };
-```
-Disable dragging when slot is empty: `disabled: !player`. Always spread `listeners`/`attributes` conditionally.
 
 ---
 

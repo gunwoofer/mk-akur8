@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import type { Player, Track } from "@/types";
-import AvatarDisplay from "@/components/AvatarDisplay";
+import PositionRows from "./PositionRows";
 import { isRaceComplete, MAX_RACES, MIN_RACES, type RaceDraft } from "@/hooks/useSubmitFlow";
 
 interface Props {
@@ -125,58 +125,13 @@ export default function RacesStep({
       {track && !picking && (
         <div className="space-y-1.5">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-600 mb-1">Finish position (1–24)</p>
-          {racers.map((p) => {
-            const pos = race.positions[p.id];
-            const open = activePlayer === p.id;
-            const takenByOthers = new Set(
-              Object.entries(race.positions).filter(([id]) => id !== p.id).map(([, v]) => v));
-            return (
-              <div key={p.id} className="rounded-2xl border border-[#1e1e1e] bg-[#141414] overflow-hidden">
-                <button
-                  onClick={() => setActivePlayer(open ? null : p.id)}
-                  className="w-full flex items-center px-4 py-3 text-left"
-                >
-                  <AvatarDisplay avatarUrl={p.avatar_url} characterAvatar={p.character_avatar} imgClassName="w-8 h-8 mr-3" emojiClassName="text-2xl mr-3" />
-                  <span className="flex-1 text-white text-sm font-semibold truncate">{p.name}</span>
-                  <span className={`min-w-[3rem] text-center rounded-lg px-2 py-1 text-sm font-black tabular-nums ${
-                    pos ? "bg-[#00d4ff] text-black" : open ? "bg-[#00d4ff]/15 text-[#00d4ff]" : "bg-[#1f1f1f] text-gray-600"
-                  }`}>
-                    {pos ? `P${pos}` : "–"}
-                  </span>
-                </button>
-                <AnimatePresence initial={false}>
-                  {open && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.15 }}
-                    >
-                      <div className="grid grid-cols-6 gap-1.5 px-3 pb-3">
-                        {Array.from({ length: 24 }, (_, i) => i + 1).map((n) => {
-                          const taken = takenByOthers.has(n);
-                          return (
-                            <button
-                              key={n}
-                              onClick={() => pickPosition(p.id, n)}
-                              className={`py-2.5 rounded-lg text-sm font-bold tabular-nums ${
-                                pos === n ? "bg-[#00d4ff] text-black"
-                                  : taken ? "bg-[#111] text-gray-700"
-                                  : n <= 12 ? "bg-[#1f1f1f] text-white active:bg-[#2a2a2a]"
-                                  : "bg-[#181818] text-gray-400 active:bg-[#2a2a2a]"
-                              }`}
-                            >
-                              {n}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            );
-          })}
+          <PositionRows
+            racers={racers}
+            positions={race.positions}
+            activePlayer={activePlayer}
+            onToggle={(id) => setActivePlayer(activePlayer === id ? null : id)}
+            onPick={pickPosition}
+          />
         </div>
       )}
 
