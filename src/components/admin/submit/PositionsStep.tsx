@@ -21,9 +21,10 @@ interface Props {
 export default function PositionsStep({
   racers, ranking, prefilled, backLabel, submitting, submitError, onSetPosition, onSubmit, onBack,
 }: Props) {
-  // Mounted on entering the step: open the keypad on the first racer without a position.
+  // Mounted on entering the step: open the keypad on the first racer without a position,
+  // or on the first racer when everything is pre-filled.
   const [activePlayer, setActivePlayer] = useState<string | null>(() =>
-    racers.find((p) => ranking[p.id] === undefined)?.id ?? null);
+    (racers.find((p) => ranking[p.id] === undefined) ?? racers[0])?.id ?? null);
 
   const placed = racers.filter((p) => ranking[p.id] !== undefined);
   const complete = placed.length === racers.length && racers.length > 0;
@@ -32,7 +33,10 @@ export default function PositionsStep({
 
   const pick = (playerId: string, position: number) => {
     onSetPosition(playerId, ranking[playerId] === position ? null : position);
-    const next = racers.find((p) => p.id !== playerId && ranking[p.id] === undefined);
+    // Next row down even when it's already filled (pre-filled from races); after the last row,
+    // back to anyone still missing a position.
+    const index = racers.findIndex((p) => p.id === playerId);
+    const next = racers[index + 1] ?? racers.find((p) => p.id !== playerId && ranking[p.id] === undefined);
     setActivePlayer(next?.id ?? null);
   };
 
