@@ -126,18 +126,20 @@ src/
       players/route.ts          # GET (list), POST (create)
       players/[id]/route.ts     # GET (stats), PATCH (avatar / archived), DELETE (archives if the player has GPs)
       matches/route.ts          # POST (submit GP → rpc submit_gp)
-      matches/[id]/route.ts     # DELETE (rpc delete_gp — re-scores later GPs)
-      history/route.ts          # GET (paginated match history)
+      matches/[id]/route.ts     # GET (one GP: ranking + Elo changes + every recorded race), DELETE (rpc delete_gp — re-scores later GPs)
+      history/route.ts          # GET (paginated match history, with each GP's tracks)
       scoring/route.ts          # GET (points table + priors from the DB)
       gp-breakdown/route.ts     # GET ?offset=N — per-duel Elo math of the N-th latest GP (replayed from the ledger)
 
   components/
+    GPDetails.tsx               # One GP's final ranking + races, shared by the dashboard modal and the admin history
     dashboard/
       Leaderboard.tsx           # Main dashboard component (uses useLeaderboard)
       CelebrationOverlay.tsx    # GP winner celebration modal + fireworks
       PlayerModal.tsx           # Player stats modal (slide-up)
       RankingInfoModal.tsx      # Points table explainer modal
       GPMathModal.tsx           # "GP Math": every duel of a GP (expected, result, points), season/global
+      GPHistoryModal.tsx        # "Last GPs": GP list (infinite scroll on scroll events — no IntersectionObserver on iOS 12) → GPDetails
     admin/
       SubmitTab.tsx             # Thin orchestrator — just wires useSubmitFlow to steps
       PlayersTab.tsx            # Add / delete players
@@ -160,6 +162,7 @@ src/
     supabase-server.ts          # Server client factory (getServerSupabase)
     ranking.ts                  # compareRank() — the one ordering rule for every leaderboard
     season.ts                   # Server-only: loadSeasonData, seasonStandings, Montreal-time months
+    ledger.ts                   # seasonRatingsBefore — season Elo before a GP (GP Math + GP details)
 
   types/
     index.ts                    # Shared interfaces (Player, HistoryEntry, PlayerStats, …)
@@ -208,6 +211,7 @@ api.players.create(name, avatar)
 api.players.delete(id)
 api.players.stats(id)
 api.matches.submit(results)
+api.matches.get(id)                    // GP details
 api.history.list({ limit?, offset? })  // pagination: limit≤50, offset≥0
 ```
 

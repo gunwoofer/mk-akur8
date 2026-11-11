@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase-server";
+import { seasonRatingsBefore } from "@/lib/ledger";
 import type { GPBreakdown, GPBreakdownPlayer, GPBreakdownScope } from "@/types";
 
 interface LedgerRow {
@@ -79,22 +80,7 @@ export async function GET(req: NextRequest) {
     const rows = (ledger ?? []) as LedgerRow[];
     const players = new Map((playerRows ?? []).map((p) => [p.id, p]));
 
-    // Season Elo before the GP = the player's previous ledger row if it's in the same month, else the start value.
-    const seasonBefore = new Map<string, number>();
-    await Promise.all(rows.map(async (r) => {
-      const { data, error: prevError } = await supabase.from("rating_changes")
-        .select("match_id, played_at, season, season_rating")
-        .eq("player_id", r.player_id).lte("played_at", r.played_at)
-        .order("played_at", { ascending: false }).order("match_id", { ascending: false })
-        .limit(5);
-      if (prevError) throw new Error(prevError.message);
-      const at = new Date(r.played_at).getTime();
-      const prev = (data ?? []).find((p) => {
-        const t = new Date(p.played_at).getTime();
-        return t < at || (t === at && p.match_id < r.match_id);
-      });
-      seasonBefore.set(r.player_id, prev && prev.season === r.season ? prev.season_rating : settings.season_elo_start);
-    }));
+    const seasonBefore = await seasonRatingsBefore(supabase, rows, settings.season_elo_start);
     const globalBefore = new Map(rows.map((r) => [r.player_id, r.rating_before]));
 
     const k = settings.season_elo_k;

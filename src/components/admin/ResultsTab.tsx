@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import type { Player, HistoryEntry, SeasonSummary, SeasonPlayer } from "@/types";
 import AvatarDisplay from "@/components/AvatarDisplay";
 import { formatSeasonRating, formatPlayerRating } from "@/lib/format";
+import GPDetails, { formatGPDate } from "@/components/GPDetails";
 
 function TrophyBadge({ wins }: { wins: number }) {
   if (wins === 0) return null;
@@ -93,6 +94,7 @@ export default function ResultsTab() {
   }, []);
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [openGp, setOpenGp] = useState<HistoryEntry | null>(null);
 
   async function deleteGp(entry: HistoryEntry) {
     const names = entry.results.map((r) => r.name).join(", ");
@@ -101,6 +103,7 @@ export default function ResultsTab() {
     try {
       await api.matches.delete(entry.match_id);
       setHistory((prev) => prev.filter((h) => h.match_id !== entry.match_id));
+      setOpenGp(null);
       setHistoryOffset((o) => Math.max(0, o - 1));
       setSeasonsLoaded(false);
       const [p, seasonData] = await Promise.all([api.players.list(), api.seasons.current()]);
@@ -255,7 +258,7 @@ export default function ResultsTab() {
                         </button>
                       </div>
                     </div>
-                    <div className="divide-y divide-[#2a2a2a]">
+                    <button onClick={() => setOpenGp(h)} className="w-full text-left divide-y divide-[#2a2a2a]">
                       {h.results.map((r) => {
                         const tied = h.results.filter((x) => x.position === r.position).length > 1;
                         return (
@@ -268,7 +271,20 @@ export default function ResultsTab() {
                           </div>
                         );
                       })}
-                    </div>
+                      <div className="flex items-center px-4 py-2">
+                        {h.tracks.length > 0 ? (
+                          <>
+                            {h.tracks.map((t, i) => (
+                              <img key={i} src={t.image} alt={t.name} className="w-9 h-6 object-cover rounded mr-1" />
+                            ))}
+                            <span className="flex-1" />
+                          </>
+                        ) : (
+                          <span className="flex-1 text-gray-600 text-xs">No race details</span>
+                        )}
+                        <span className="text-[#00d4ff] text-xs font-semibold">Details ›</span>
+                      </div>
+                    </button>
                   </div>
                 ))}
                 <div ref={sentinelRef} className="py-4 flex justify-center">
@@ -367,6 +383,28 @@ export default function ResultsTab() {
           </div>
         )}
       </div>
+
+      {openGp && (
+        <div className="fixed inset-0 z-50 bg-[#0a0a0a]">
+          <div className="h-full max-w-md mx-auto flex flex-col">
+            <div className="shrink-0 flex items-center px-4 pt-4 pb-3 border-b border-[#181818]">
+              <button onClick={() => setOpenGp(null)} className="text-[#00d4ff] text-sm font-semibold mr-3">← History</button>
+              <p className="flex-1 min-w-0 text-gray-400 text-xs text-right truncate">{formatGPDate(openGp.played_at)}</p>
+              <button
+                onClick={() => deleteGp(openGp)}
+                disabled={deletingId !== null}
+                aria-label="Delete GP"
+                className="w-8 h-8 -mr-2 ml-2 flex items-center justify-center rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-400/10 text-sm disabled:opacity-40"
+              >
+                {deletingId === openGp.match_id ? "…" : "🗑"}
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <GPDetails matchId={openGp.match_id} mobile accent="#00d4ff" />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

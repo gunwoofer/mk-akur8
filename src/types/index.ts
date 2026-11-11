@@ -90,6 +90,7 @@ export interface HistoryEntry {
   match_id: string;
   played_at: string;
   results: HistoryResult[];
+  tracks: Pick<Track, "id" | "name" | "image">[];   // race order; empty when races weren't recorded
 }
 
 export interface SubmitMatchPayload {
@@ -253,4 +254,29 @@ export interface GPBreakdown {
   scale: number;
   season: GPBreakdownScope | null;   // null when not scored with Elo
   global: GPBreakdownScope | null;
+}
+
+export interface GPDetailPlayer {
+  player_id: string;
+  name: string;
+  character_avatar: string;
+  avatar_url: string | null;
+  position: number;
+  season_delta: number | null;   // null when the ledger row is missing
+  global_delta: number | null;
+  season_kind: SeasonKind;
+  global_kind: SeasonKind;
+}
+
+export interface GPDetailRace {
+  race_number: number;
+  track: Pick<Track, "id" | "name" | "image"> | null;
+  finishes: { player_id: string; position: number }[];   // best first
+}
+
+export interface GPDetail {
+  match_id: string;
+  played_at: string;
+  results: GPDetailPlayer[];     // best first
+  races: GPDetailRace[];         // empty when the GP wasn't recorded race by race
 }

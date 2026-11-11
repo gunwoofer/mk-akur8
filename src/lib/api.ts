@@ -1,4 +1,4 @@
-import type { GPBreakdown, Player, PlayerStats, PlayerTrackStats, HistoryEntry, RaceSubmission, ScoringConfig, Track, TracksOverview, SeasonInfo, SeasonPlayer, SeasonSummary, StreakResponse } from "@/types";
+import type { GPBreakdown, GPDetail, Player, PlayerStats, PlayerTrackStats, HistoryEntry, RaceSubmission, ScoringConfig, Track, TracksOverview, SeasonInfo, SeasonPlayer, SeasonSummary, StreakResponse } from "@/types";
 
 export type SubmitResult = { player_id: string; position: number };
 
@@ -59,6 +59,8 @@ export const api = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ results, races }),
       }),
+    get: (id: string) =>
+      apiFetch<GPDetail>(`/api/matches/${id}`),
     delete: (id: string) =>
       apiFetch<{ deleted: string }>(`/api/matches/${id}`, { method: "DELETE" }),
   },
