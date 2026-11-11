@@ -17,6 +17,7 @@ import SeasonHistoryModal from "./SeasonHistoryModal";
 import TracksModal from "./TracksModal";
 import GPMathModal from "./GPMathModal";
 import GPHistoryModal from "./GPHistoryModal";
+import DashboardMenu, { type MenuItem } from "./DashboardMenu";
 
 export default function Leaderboard() {
   const {
@@ -64,7 +65,14 @@ export default function Leaderboard() {
         kind: p.rating_kind, provisional: p.provisional, requiredGp: p.required_gp,
       }));
 
-  const headerButton = "px-3 py-1.5 rounded-lg border border-white/15 bg-black/50 text-[#e5e7eb] text-xs font-semibold uppercase tracking-wider";
+  const noSeasonGames = isSeason && !!seasonInfo && !seasonInfo.has_games;
+  const menu: MenuItem[] = [
+    { icon: "🏁", label: "Last GPs", hint: "Every GP and its races", onSelect: () => setShowGPs(true) },
+    { icon: "🗺️", label: "Tracks", hint: "Track stats and kings", onSelect: () => setShowTracks(true) },
+    { icon: "🧮", label: "GP Math", hint: "How each GP changed the Elo", onSelect: () => setShowMath(true) },
+    { icon: "🏆", label: "Past Seasons", hint: "Every month's winner", onSelect: () => setShowSeasonHistory(true) },
+    { icon: "📖", label: "Ranking System", hint: "How the Elo works", onSelect: () => setShowInfo(true) },
+  ];
 
   return (
     <div className={mobile ? "flex flex-col min-h-screen w-full px-4 py-4" : "flex flex-col h-screen w-full px-16 py-5 overflow-hidden"}>
@@ -86,43 +94,6 @@ export default function Leaderboard() {
                 🔥{bestStreak.streak} <span className="text-white">{bestStreak.player_name.toUpperCase()}</span>
               </p>
             )}
-          </div>
-          <div className="grid grid-cols-2 gap-2 mt-3">
-            <button
-              onClick={() => setShowGPs(true)}
-              className={`${headerButton} col-span-2`}
-              style={{ WebkitTapHighlightColor: "transparent" }}
-            >
-              Last GPs
-            </button>
-            <button
-              onClick={() => setShowSeasonHistory(true)}
-              className={headerButton}
-              style={{ WebkitTapHighlightColor: "transparent" }}
-            >
-              Past Seasons
-            </button>
-            <button
-              onClick={() => setShowTracks(true)}
-              className={headerButton}
-              style={{ WebkitTapHighlightColor: "transparent" }}
-            >
-              Tracks
-            </button>
-            <button
-              onClick={() => setShowMath(true)}
-              className={headerButton}
-              style={{ WebkitTapHighlightColor: "transparent" }}
-            >
-              GP Math
-            </button>
-            <button
-              onClick={() => setShowInfo(true)}
-              className={headerButton}
-              style={{ WebkitTapHighlightColor: "transparent" }}
-            >
-              Ranking System
-            </button>
           </div>
         </div>
       ) : (
@@ -156,7 +127,7 @@ export default function Leaderboard() {
       <SeasonProgressBar info={seasonInfo} />
 
       {/* Season / Global toggle */}
-      <div className={`flex mb-1 shrink-0 ${mobile ? "flex-col items-start" : "items-center"}`}>
+      <div className="flex items-center mb-1 shrink-0">
         <div className="flex bg-black/60 border border-white/10 rounded-xl p-1">
           {(["season", "global"] as const).map((v) => (
             <button
@@ -170,49 +141,16 @@ export default function Leaderboard() {
             </button>
           ))}
         </div>
-        {isSeason && seasonInfo && !seasonInfo.has_games && (
-          <p className={`text-[#cbd5e1] text-xs text-outline ${mobile ? "mt-2" : "ml-4"}`}>No GPs played this month yet — showing global ranking</p>
+        {!mobile && noSeasonGames && (
+          <p className="text-[#cbd5e1] text-xs text-outline ml-4">No GPs played this month yet — showing global ranking</p>
         )}
-        {!mobile && (
-          <div className="flex items-center ml-auto pl-4">
-            <button
-              onClick={() => setShowGPs(true)}
-              className={`${headerButton} mr-2`}
-              style={{ WebkitTapHighlightColor: "transparent" }}
-            >
-              Last GPs
-            </button>
-            <button
-              onClick={() => setShowSeasonHistory(true)}
-              className={`${headerButton} mr-2`}
-              style={{ WebkitTapHighlightColor: "transparent" }}
-            >
-              Past Seasons
-            </button>
-            <button
-              onClick={() => setShowTracks(true)}
-              className={`${headerButton} mr-2`}
-              style={{ WebkitTapHighlightColor: "transparent" }}
-            >
-              Tracks
-            </button>
-            <button
-              onClick={() => setShowMath(true)}
-              className={`${headerButton} mr-2`}
-              style={{ WebkitTapHighlightColor: "transparent" }}
-            >
-              GP Math
-            </button>
-            <button
-              onClick={() => setShowInfo(true)}
-              className={headerButton}
-              style={{ WebkitTapHighlightColor: "transparent" }}
-            >
-              Ranking System
-            </button>
-          </div>
-        )}
+        <div className="ml-auto pl-4">
+          <DashboardMenu items={menu} />
+        </div>
       </div>
+      {mobile && noSeasonGames && (
+        <p className="text-[#cbd5e1] text-xs text-outline mt-1 mb-1 shrink-0">No GPs played this month yet — showing global ranking</p>
+      )}
 
       {loading ? (
         <div className="flex-1 flex items-center justify-center">

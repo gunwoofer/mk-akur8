@@ -135,6 +135,7 @@ src/
     GPDetails.tsx               # One GP's final ranking + races, shared by the dashboard modal and the admin history
     dashboard/
       Leaderboard.tsx           # Main dashboard component (uses useLeaderboard)
+      DashboardMenu.tsx         # The one ☰ Menu button that opens every dashboard modal — add new modals here, not as header buttons
       CelebrationOverlay.tsx    # GP winner celebration modal + fireworks
       PlayerModal.tsx           # Player stats modal (slide-up)
       RankingInfoModal.tsx      # Points table explainer modal
