@@ -73,6 +73,7 @@ export async function GET() {
   // Same skip logic: only resets when the player participated and didn't win solo.
   const matchIdsAsc = [...matchIds].reverse();
   const curStreaks = new Map<string, number>();
+  const best: Record<string, number> = {};
   let bestPlayerId: string | null = null;
   let bestStreak = 0;
 
@@ -87,6 +88,7 @@ export async function GET() {
       if (player_id === soloWinnerId) {
         const n = (curStreaks.get(player_id) ?? 0) + 1;
         curStreaks.set(player_id, n);
+        best[player_id] = Math.max(best[player_id] ?? 0, n);
         if (n > bestStreak) {
           bestStreak = n;
           bestPlayerId = player_id;
@@ -101,5 +103,5 @@ export async function GET() {
     ? { player_id: bestPlayerId, player_name: playerNameMap.get(bestPlayerId) ?? "Unknown", streak: bestStreak }
     : null;
 
-  return NextResponse.json({ streaks, best_ever });
+  return NextResponse.json({ streaks, best, best_ever });
 }

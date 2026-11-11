@@ -133,6 +133,7 @@ export interface BestStreak {
 
 export interface StreakResponse {
   streaks: Record<string, number>;
+  best: Record<string, number>;      // each player's longest solo-win streak ever (players with at least one win)
   best_ever: BestStreak | null;
 }
 

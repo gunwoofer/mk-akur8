@@ -189,6 +189,8 @@ export default function Leaderboard() {
               seasonPlayers.find((p) => p.player_id === selectedId)?.name ?? ""
             }
             streak={players.find((p) => p.id === selectedId)?.streak}
+            bestStreak={players.find((p) => p.id === selectedId)?.best_streak}
+            isRecord={!!bestStreak && bestStreak.player_id === selectedId}
             initialView={showSeason ? "season" : "global"}
             onClose={() => setSelectedId(null)}
           />

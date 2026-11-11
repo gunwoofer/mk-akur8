@@ -9,6 +9,7 @@ import type { Player, HistoryEntry, SeasonInfo, SeasonKind, SeasonPlayer, BestSt
 export interface RankedPlayer extends Player {
   rankDelta: number;
   streak?: number;
+  best_streak?: number;
   season_wins: number;
 }
 
@@ -157,6 +158,7 @@ export function useLeaderboard() {
           ? 0
           : frozenGlobal[p.id] - (i + 1),
         streak: streakData?.streaks[p.id],
+        best_streak: streakData?.best?.[p.id],
         season_wins: seasonWinsById.get(p.id) ?? 0,
       }));
 
