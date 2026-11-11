@@ -40,6 +40,8 @@ export interface StatBlock {
   gp: number;
   wins: number;
   podiums: number;
+  best_streak: number;            // most solo GP wins in a row in this scope
+  streak_record: boolean;         // global only: holds the all-time longest streak
   avg_finish: number | null;
   best_finish: number | null;
   recent: RecentResult[];         // newest first, max 10
@@ -133,7 +135,6 @@ export interface BestStreak {
 
 export interface StreakResponse {
   streaks: Record<string, number>;
-  best: Record<string, number>;      // each player's longest solo-win streak ever (players with at least one win)
   best_ever: BestStreak | null;
 }
 

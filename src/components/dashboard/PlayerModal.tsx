@@ -25,13 +25,11 @@ interface Props {
   stats: PlayerStats | null;
   playerName: string;
   streak?: number;
-  bestStreak?: number;
-  isRecord: boolean;               // holds the all-time best streak
   initialView: View;
   onClose: () => void;
 }
 
-export default function PlayerModal({ stats, playerName, streak, bestStreak, isRecord, initialView, onClose }: Props) {
+export default function PlayerModal({ stats, playerName, streak, initialView, onClose }: Props) {
   const mobile = useIsMobile();
   const hasSeasonGames = (stats?.current_season.stats.gp ?? 0) > 0;
   const [view, setView] = useState<View>(initialView);
@@ -108,9 +106,6 @@ export default function PlayerModal({ stats, playerName, streak, bestStreak, isR
                 <Badge>🏆 {stats.season_wins} season{stats.season_wins !== 1 ? "s" : ""} won</Badge>
               )}
               {streak !== undefined && <Badge>🔥 {streak} win streak</Badge>}
-              {bestStreak !== undefined && (
-                <Badge>{isRecord ? "👑" : "⭐"} Best streak {bestStreak}{isRecord ? " · record" : ""}</Badge>
-              )}
               {stats && <Badge>{stats.global.gp} GPs</Badge>}
             </div>
           </div>
@@ -209,7 +204,11 @@ export default function PlayerModal({ stats, playerName, streak, bestStreak, isR
                     value={String(block.wins)}
                     sub={block.gp ? `${Math.round((block.wins / block.gp) * 100)}% win rate` : undefined}
                   />
-                  <Tile label="Podiums" value={String(block.podiums)} sub={block.gp ? `${Math.round((block.podiums / block.gp) * 100)}% of GPs` : undefined} />
+                  <Tile
+                    label="Best streak"
+                    value={`${block.best_streak}${block.streak_record ? " 👑" : ""}`}
+                    sub={block.streak_record ? "all-time record" : block.best_streak === 1 ? "win in a row" : "wins in a row"}
+                  />
                   <Tile
                     label="Avg finish"
                     value={block.avg_finish !== null ? `P${block.avg_finish}` : "—"}

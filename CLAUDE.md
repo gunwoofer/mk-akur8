@@ -163,6 +163,7 @@ src/
     supabase-server.ts          # Server client factory (getServerSupabase)
     ranking.ts                  # compareRank() — the one ordering rule for every leaderboard
     season.ts                   # Server-only: loadSeasonData, seasonStandings, Montreal-time months
+    streaks.ts                  # Win streaks (solo wins in a row, skipped GPs don't break it) — header best streak + player modal
     ledger.ts                   # seasonRatingsBefore — season Elo before a GP (GP Math + GP details)
 
   types/

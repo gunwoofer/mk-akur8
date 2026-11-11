@@ -3,6 +3,7 @@ import { getServerSupabase } from "@/lib/supabase-server";
 import { requireAdmin } from "@/lib/admin-auth";
 import { fetchAll } from "@/lib/fetch-all";
 import { rankedPlayers } from "@/lib/players";
+import { loadStreakGPs, walkStreaks, type StreakGP } from "@/lib/streaks";
 import {
   currentYearMonth, monthName, loadSeasonData, seasonStandings, computeSeasonWins, seasonKind, type SeasonData,
 } from "@/lib/season";
@@ -78,8 +79,9 @@ export async function GET(
   let rows: LedgerRow[];
   let ranked: Player[];
   let seasonData: SeasonData;
+  let gps: StreakGP[];
   try {
-    [rows, ranked, seasonData] = await Promise.all([
+    [rows, ranked, seasonData, gps] = await Promise.all([
       fetchAll<LedgerRow>((from, to) =>
         supabase
           .from("rating_changes")
@@ -90,6 +92,7 @@ export async function GET(
           .range(from, to)),
       rankedPlayers(supabase),
       loadSeasonData(supabase),
+      loadStreakGPs(supabase),
     ]);
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
@@ -103,6 +106,11 @@ export async function GET(
   const seasonStandingsNow = seasonStandings(nowYM, seasonData).filter((s) => !s.player.archived_at);
   const seasonRank = seasonStandingsNow.findIndex((s) => s.player.id === id);
   const globalRank = ranked.findIndex((p) => p.id === id);
+
+  const seasonMatches = new Set(seasonRows.map((r) => r.match_id));
+  const globalStreaks = walkStreaks(gps);
+  const seasonBest = walkStreaks(gps.filter((g) => seasonMatches.has(g.match_id))).best.get(id) ?? 0;
+  const globalBest = globalStreaks.best.get(id) ?? 0;
 
   const lastGlobal = rows[rows.length - 1];
   const lastSeason = seasonRows[seasonRows.length - 1];
@@ -122,6 +130,7 @@ export async function GET(
         lastSeason ? lastSeason.season_rating - (prevSeason?.season_rating ?? seasonStart) : null,
         seasonRank >= 0 ? seasonRank + 1 : null,
         seasonStandingsNow.length,
+        { best: seasonBest, record: false },
       ),
       series: seasonRows.map((r) => ({ played_at: r.played_at, rating: r.season_rating, position: r.position })),
     },
@@ -131,6 +140,7 @@ export async function GET(
       lastGlobal ? lastGlobal.rating_after - lastGlobal.rating_before : null,
       globalRank >= 0 ? globalRank + 1 : null,
       ranked.length,
+      { best: globalBest, record: globalStreaks.record?.player_id === id },
     ),
     seasons: seasonData.sortedMonths.flatMap((ym): SeasonRecord[] => {
       const standings = seasonStandings(ym, seasonData);
@@ -169,6 +179,7 @@ function statBlock(
   ratingDelta: number | null,
   rank: number | null,
   rankedPlayers: number,
+  streak: { best: number; record: boolean },
 ): StatBlock {
   const positions = rows.map((r) => r.position);
   return {
@@ -179,6 +190,8 @@ function statBlock(
     gp: rows.length,
     wins: positions.filter((p) => p === 1).length,
     podiums: positions.filter((p) => p <= 3).length,
+    best_streak: streak.best,
+    streak_record: streak.record,
     avg_finish: positions.length ? Math.round((positions.reduce((a, b) => a + b, 0) / positions.length) * 10) / 10 : null,
     best_finish: positions.length ? Math.min(...positions) : null,
     recent: rows.slice(-10).reverse().map((r) => ({ match_id: r.match_id, played_at: r.played_at, position: r.position })),
