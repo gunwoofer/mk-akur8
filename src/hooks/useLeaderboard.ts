@@ -227,6 +227,12 @@ export function useLeaderboard() {
   useEffect(() => { doFetch(); }, [doFetch]);
 
   useEffect(() => {
+    const onVisible = () => { if (!document.hidden) doFetch(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [doFetch]);
+
+  useEffect(() => {
     const trigger = () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(doFetch, 800);
@@ -252,8 +258,27 @@ export function useLeaderboard() {
     };
   }, [doFetch]);
 
+  // The fallback poll asks Supabase directly for the latest GP id: free, unlike the 4 API
+  // routes, which each cost a Vercel invocation (Hobby limits paused the site on 2026-11-16).
+  // The full refetch only runs when a GP appeared, and every 10 min for player edits.
   useEffect(() => {
-    const id = setInterval(doFetch, 15_000);
+    const supabase = getSupabase();
+    let lastFull = Date.now();
+    const id = setInterval(async () => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      if (Date.now() - lastFull > 10 * 60_000) {
+        lastFull = Date.now();
+        doFetch();
+        return;
+      }
+      const { data } = await supabase.from("matches").select("id")
+        .order("played_at", { ascending: false }).order("id", { ascending: false }).limit(1);
+      const latest = data?.[0]?.id ?? "none";
+      if (lastMatchIdRef.current !== undefined && latest !== lastMatchIdRef.current) {
+        lastFull = Date.now();
+        doFetch();
+      }
+    }, 15_000);
     return () => clearInterval(id);
   }, [doFetch]);
 
